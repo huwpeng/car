@@ -9,7 +9,8 @@
    
 #include "ZFY_Ipc.h"
 #include "ZFY_Lpr.h"
-   
+#include "zfy_Conf.h"
+#include "zfy_Rola.h"
 
    
 int main(int argc, char **argv)  
@@ -58,4 +59,31 @@ int main(int argc, char **argv)
 	for(i=0;i<code_list.CodeNum;i++)
 		printf("-----code=%s-----\r\n",code_list.CodeList[i]);
 	
+	{
+		IPC_CONFIG ipc_conf;
+		
+		ZFY_ConfConfigDataBaseInit();
+		
+		memset(&ipc_conf,0,sizeof(ipc_conf));
+		ZFY_ConfIpcConfig(FALSE,&ipc_conf);
+		printf("-------ipc--ip=0x%x--\r\n",ipc_conf.IpcIp);
+		printf("-------ipc--port=%d--\r\n",ipc_conf.IpcPort);
+		printf("-------ipc--user=%s--\r\n",ipc_conf.IpcUser);
+		printf("-------ipc--pass=%s--\r\n",ipc_conf.IpcPwd);
+		ipc_conf.IpcPort=88;
+		strcpy(ipc_conf.IpcUser,"admin123");
+		strcpy(ipc_conf.IpcPwd,"123456");
+		ZFY_ConfIpcConfig(TRUE,&ipc_conf);
+		ZFY_ConfIpcConfig(FALSE,&ipc_conf);
+		printf("----2---ipc--ip=0x%x--\r\n",ipc_conf.IpcIp);
+		printf("----2---ipc--port=%d--\r\n",ipc_conf.IpcPort);
+		printf("----2---ipc--user=%s--\r\n",ipc_conf.IpcUser);
+		printf("----2---ipc--pass=%s--\r\n",ipc_conf.IpcPwd);
+	}
+	
+	{
+		ZFY_RolaDevOpen();
+		sleep(10);
+		ZFY_RolaDevClose();
+	}
 } 
