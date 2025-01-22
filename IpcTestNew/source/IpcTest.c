@@ -11,6 +11,7 @@
 #include "ZFY_Lpr.h"
 #include "zfy_Conf.h"
 #include "zfy_Rola.h"
+#include "zfy_Platform.h"
 
    
 int main(int argc, char **argv)  
@@ -85,5 +86,21 @@ int main(int argc, char **argv)
 		ZFY_RolaDevOpen();
 		sleep(10);
 		ZFY_RolaDevClose();
+	}
+	
+	{
+		CLOAD_PLAT_CONF CloadConf;
+		
+		memset(&CloadConf,0,sizeof(CloadConf));
+		CloadConf.strCloadServerIP="192.168.8.11";
+		CloadConf.CloadServerPort=1234;
+		CloadConf.strLoginUser="admin";
+		CloadConf.strLoginPwd="admin";
+		CloadConf.strDevIMEI="868591050607174";
+		CloadConf.strDevIMSI="460042187616489";
+		
+		ZFY_CloadServerOpen(&CloadConf);
+		sleep(30);
+		ZFY_CloadServerClose();
 	}
 } 

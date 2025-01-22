@@ -38,6 +38,7 @@
 #include <linux/serial.h>
 #include "zfy_Rola.h"
 #include "zfy_Conf.h"
+#include "ZFY_Ipc.h"
 #include "LogEventServer.h"
 #include "aes.h"
 
@@ -112,7 +113,10 @@ typedef struct tSER_UNIT_STATUS
 typedef struct tSER_DEV_SERVER
 {
 	BOOL						IsReqQuit;
+	BOOL						IsReqAlarmQuit;
 	BOOL						IsInitReady;
+	BOOL						IsAlarmTrig;
+	pthread_t					AlarmThreadID;
 	pthread_t					ManagerThreadID;
 	pthread_t					CallerThread;
 	__pid_t						CallerPID;
@@ -586,7 +590,7 @@ static BOOL SerDevReadInputQueue(void *pBuf,DWORD *pSize,const DWORD *pTimeOutMS
 	return TRUE;
 }
 
-static WORD CRC_16_S_CCIT_CHECK(const BYTE *di, DWORD len)
+static WORD CRC_16_S_CCIT_FALSE(const BYTE *di, DWORD len)
 {
     WORD crc_poly = 0x1021;  //X^16+X^12+X^5+1 total 16 effective bits without X^16. Computed total data shall be compensated 16-bit '0' before CRC computing.
 	DWORD clen = len+2;
@@ -628,6 +632,11 @@ static BOOL ProtocolAnalyse1F(const BYTE *pBuf,DWORD *pLen,BOOL *pIsCutted)
 			else
 			{
 				DataLen=pBuf[12];
+				printf("---1--DataLen=%d----\r\n",DataLen);
+				DataLen=DataLen<<8;
+				printf("--2---DataLen=%d----\r\n",DataLen);
+				DataLen+=pBuf[13];
+				printf("---3--DataLen=%d----\r\n",DataLen);
 				if(*pLen<(DWORD)(DataLen+16))	
 				{
 					*pIsCutted=TRUE;
@@ -635,8 +644,9 @@ static BOOL ProtocolAnalyse1F(const BYTE *pBuf,DWORD *pLen,BOOL *pIsCutted)
 				}
 				else
 				{
-					crc16 = pBuf[16+DataLen - 3]<<8 | pBuf[16+DataLen - 2];
-					U16Temp = CRC_16_S_CCIT_CHECK(pBuf, 16+DataLen - 3);
+					crc16 = pBuf[14+DataLen]<<8 | pBuf[15+DataLen];
+					U16Temp = CRC_16_S_CCIT_FALSE(pBuf,14+DataLen);
+					printf("----crc16=0x%x---U16Temp=0x%x----\r\n",crc16,U16Temp);
 					if((pBuf[16+DataLen]==0xF1) && (crc16 == U16Temp))
 					{
 						*pLen=DataLen+16;
@@ -709,6 +719,35 @@ static void LoraParseRecvData(BYTE *pBuf,DWORD Len)
 					switch(RecvBuf[i+11])
 					{
 					case 0x0A:
+						{
+							BYTE SendBuf[256]={0};
+							WORD Count=0,MsgLen=16;
+							BYTE DevMsgId=0x7A;
+							BYTE MsgBody[16]={0};
+							WORD U16Temp=0;
+							WORD U16CRC=0;
+							
+							SendBuf[0]=0x1F;
+							SendBuf[9]=(Count<<8)&0xff;
+							SendBuf[10]=Count&0xff;
+							SendBuf[11]=DevMsgId;
+							SendBuf[12]=(MsgLen<<8)&0xff;;
+							SendBuf[13]=MsgLen&0xff;;
+							AES_init_ctx(&ctx, key);
+							num = MsgLen/16;
+							for(j=0;j<num;j++)
+							{
+								AES_ECB_encrypt(&ctx, &MsgBody[j*16]);
+							}
+							memcpy(&SendBuf[14],MsgBody,sizeof(MsgBody));
+							U16CRC = CRC_16_S_CCIT_FALSE(SendBuf,14+sizeof(MsgBody));
+							SendBuf[14+sizeof(MsgBody)]=U16CRC>>8;
+							SendBuf[15+sizeof(MsgBody)]=U16CRC&0xff;
+							SendBuf[16+sizeof(MsgBody)]=0xF1;
+							
+							ZFY_RolaWriteData(SendBuf,17+sizeof(MsgBody),FALSE,NULL);
+						}
+						//ZFY_RolaWriteData(key,16,FALSE,NULL);
 						break;
 					case 0x0B:
 						break;
@@ -751,6 +790,11 @@ static void *SerDevUnitRecvThread(void *pArg)
 		,getpid(),pthread_self());
 	pConfig=&sSerDevServer.UnitSet;
 	pStatus=&sSerDevServer.UnitStatus;
+	
+	{
+		BYTE buf[19]={0x1F,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x00,0x01,0x0A,0x00,0x02,0x55,0xaa,0x12,0x2c,0xF1};
+		LoraParseRecvData(buf,19);
+	}
 	for(;;)
 	{
 		if(pStatus->IsReqRecvQuit)
@@ -859,7 +903,7 @@ static void *SerDevUnitSendThread(void *pArg)
 				 pStatus->IsInError=TRUE;
 				 break;
 			 }
-			 
+			 printf("-----send--buf=0x%x--0x%x---len=%d----\r\n",pCurrBuf[0],pCurrBuf[1],TotalLen);
 			 CurrLen=write(pStatus->DevDrvHandle,pCurrBuf,TotalLen);
 			 if(CurrLen<=0)
 			 {
@@ -1085,6 +1129,57 @@ static void *SerDevManagerThread(void *pArg)
 	return NULL;
 }
 
+static void *AlarmProcThread(void *pArg)
+{
+	PSER_DEV_SERVER		pServer=(PSER_DEV_SERVER)pArg;
+	int					i=0,CancelStatus,RetryCount,ReportTime,InfCheckTime=0;
+	BOOL				IsRestore=FALSE;
+	
+	JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_INFO,"******lora serial alarm(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
+	
+	printf("-------AlarmProcThread-------\r\n");
+	
+	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED,NULL);
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,NULL);
+	printf("-------AlarmProcThread---000----\r\n");
+	for(RetryCount=0;;)
+	{
+		if(pServer->IsReqAlarmQuit)
+		{
+			pServer->IsReqAlarmQuit=FALSE;
+			break;
+		}
+		pthread_testcancel();
+		
+		if(pServer->IsAlarmTrig)
+		{
+			IPC_API_CONF IpcApiConf;
+			time_t start_time;
+			time_t stop_time;
+	
+			memset(&IpcApiConf,0,sizeof(IpcApiConf));
+			IpcApiConf.strIpcServerIP="192.168.8.108";
+			IpcApiConf.IpcServerPort=80;
+			IpcApiConf.strLoginUser="admin";
+			IpcApiConf.strLoginPwd="123456abc";
+			IpcApiConf.strPicPath="/opt/car/pic/";
+			IpcApiConf.strRecPath="/opt/car/rec/";
+			ZFY_IpcInit(&IpcApiConf);
+			ZFY_IpcGetTime(0);
+			ZFY_IpcStartRecord(0);
+			time(&start_time);
+			sleep(10);
+			time(&stop_time);
+			ZFY_IpcStopRecord(0);
+			ZFY_IpcSnapShot("alarm",0);
+			sleep(5);
+			ZFY_IpcLoadRecord(start_time,stop_time,0);
+			pServer->IsAlarmTrig=FALSE;
+		}
+	}
+	
+}
+
 extern BOOL ZFY_RolaDevOpen(void)
 {
 	int							OldStatus;
@@ -1150,6 +1245,14 @@ extern BOOL ZFY_RolaDevOpen(void)
 		JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial manager thread create failed...\r\n");
 		return FALSE;
 	}
+	if(pthread_create(&sSerDevServer.AlarmThreadID,NULL,AlarmProcThread,&sSerDevServer)!=STD_SUCCESS)
+	{
+		SerDevQueueUnInit(TRUE);
+		pthread_attr_destroy(&ThreadAttr);
+		PTHREAD_MUTEX_SAFE_UNLOCK(sSerDevMutex,OldStatus);
+		JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial alarm thread create failed...\r\n");
+		return FALSE;
+	}
 	printf("-------ZFY_RolaDevOpen---222----\r\n");
 	pthread_attr_destroy(&ThreadAttr);
 	sSerDevServer.IsInitReady=TRUE;
@@ -1175,7 +1278,14 @@ extern void ZFY_RolaDevClose(void)
 			pthread_cancel(sSerDevServer.ManagerThreadID);
 		pthread_join(sSerDevServer.ManagerThreadID,NULL);
 		sSerDevServer.ManagerThreadID=INVALID_PTHREAD_ID;
-		sSerDevServer.IsReqQuit=FALSE;		
+		sSerDevServer.IsReqQuit=FALSE;	
+		sSerDevServer.IsReqAlarmQuit=TRUE;
+		usleep(2*PTHREAD_DEFAULT_QUIT_TIMEOUT_US);
+		if(sSerDevServer.IsReqAlarmQuit)
+			pthread_cancel(sSerDevServer.AlarmThreadID);
+		pthread_join(sSerDevServer.AlarmThreadID,NULL);
+		sSerDevServer.AlarmThreadID=INVALID_PTHREAD_ID;
+		sSerDevServer.IsReqAlarmQuit=FALSE;			
 		SerDevQueueUnInit(TRUE);
 		sSerDevServer.IsInitReady=FALSE;
 	}
