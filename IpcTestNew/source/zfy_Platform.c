@@ -426,6 +426,10 @@ static void *CloadTcpProcThread(void *pArg)
 	char						strManufacturer[128]={0};
 	char						strProductModel[128]={0};
 	char						strOperType[128]={0};
+	struct AES_ctx 				ctx;
+	int 						num;
+	DWORD 						datalen = 0;
+	BYTE key[16] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F};	
 	
 	JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_INFO,"******CLOAD-TCP thread(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
 	sleep(1);
@@ -452,6 +456,7 @@ static void *CloadTcpProcThread(void *pArg)
 					sCloadTcpServer.m_IsCloadLogin=FALSE;
 					PTHREAD_MUTEX_SAFE_UNLOCK(sCloadTcpWorkMutex,OldStatus);
 					JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_CRIT,"heartbeat timeout...\r\n");
+					sCloadTcpServer.m_CloadLastHeartAckTime=CurrHCheckTime;
 				}
 			}
 			if(!pServer->m_IsCloadLogin)
@@ -471,54 +476,51 @@ static void *CloadTcpProcThread(void *pArg)
 				GET_CURRENT_SYS_TIME(CurrLoginTime);
 				if(CurrLoginTime-LastLoginTime>180)
 				{
-					//AEPB_MsgGen_Login(&B_Login,&B_OutJson);
 					if(pServer->m_IsCloadConnected)
 					{
-						CLOAD_TCP_QUEUE_NODE	SendNode;
-						WORD tlen=0;
-
-											
-						memset(&SendNode,0,sizeof(SendNode));
-						SendNode.m_Buf[0]=0x02;
-						SendNode.m_Buf[1]=tlen>>8;
-						SendNode.m_Buf[2]=tlen&0xff;
-						SendNode.m_Len=0x03;
-						//CloadTcpSendQueuePush(&pServer->m_LocalSendQueue,&SendNode);
-					}
-					
-					{
-						if(pServer->m_IsCloadConnected)
+						BYTE SendBuf[256]={0};
+						WORD Count=0,MsgLen=16;
+						BYTE DevMsgId=0x0A;
+						BYTE MsgBody[16]={0};
+						WORD U16Temp=0;
+						WORD U16CRC=0;
+						
+						SendBuf[0]=0x1F;
+						memset(&SendBuf[1],0xff,8);
+						SendBuf[9]=(Count<<8)&0xff;
+						SendBuf[10]=Count&0xff;
+						SendBuf[11]=DevMsgId;
+						SendBuf[12]=(MsgLen<<8)&0xff;;
+						SendBuf[13]=MsgLen&0xff;;
+						AES_init_ctx(&ctx, key);
+						num = MsgLen/16;
+						for(j=0;j<num;j++)
 						{
-							CLOAD_TCP_QUEUE_NODE	SendNode;
+							AES_ECB_encrypt(&ctx, &MsgBody[j*16]);
+						}
+						memcpy(&SendBuf[14],MsgBody,sizeof(MsgBody));
+						U16CRC = CRC_16_S_CCIT_FALSE(SendBuf,14+sizeof(MsgBody));
+						SendBuf[14+sizeof(MsgBody)]=U16CRC>>8;
+						SendBuf[15+sizeof(MsgBody)]=U16CRC&0xff;
+						SendBuf[16+sizeof(MsgBody)]=0xF1;
+						
+						if(sCloadTcpServer.m_IsCloadConnected)
+						{
+							CLOAD_TCP_QUEUE_NODE SendNode;
 
 							memset(&SendNode,0,sizeof(SendNode));
-							
-							//AepTcpSendQueuePush(&pServer->m_LocalSendQueue,&SendNode);
+							memcpy(SendNode.m_Buf,SendBuf,17+sizeof(MsgBody));
+							SendNode.m_Len=17+sizeof(MsgBody);
+							CloadTcpSendQueuePush(&sCloadTcpServer.m_LocalSendQueue,&SendNode);
 						}
 					}
-					GET_CURRENT_SYS_TIME(LastLoginTime);
 					
+					GET_CURRENT_SYS_TIME(LastLoginTime);
 					LastSendDataTime=0;
 				}
 			}
 			GET_CURRENT_SYS_TIME(CurrLoginTime);
 			GET_CURRENT_SYS_TIME(CurrHeartTime);
-			PTHREAD_MUTEX_SAFE_LOCK(sCloadTcpWorkMutex,OldStatus);
-			
-			/*if(pServer->m_IsAepPreLogin&&CurrHeartTime-LastHeartTime>100)
-			{
-				if(pServer->m_IsAepConnected)
-				{
-					AEP_TCP_QUEUE_NODE	SendNode;
-
-					memset(&SendNode,0,sizeof(SendNode));
-					SendNode.m_Len=0x01;
-					SendNode.m_Buf[0]=0x04;
-					CloadTcpSendQueuePush(&pServer->m_LocalSendQueue,&SendNode);
-				}
-				LastHeartTime=CurrHeartTime;
-			}*/
-			PTHREAD_MUTEX_SAFE_UNLOCK(sCloadTcpWorkMutex,OldStatus);
 			GET_CURRENT_SYS_TIME(CurrSendAlarmTime);
 			
 			if(pServer->m_IsCloadSendData)
@@ -726,6 +728,7 @@ extern BOOL ZFY_CloadServerOpen(PCLOAD_CONF_CONF pConf)
 	int					i,ret,OldStatus;
 	struct in_addr		CloadServerIP;
 	
+	printf("-------ZFY_CloadServerOpen------\r\n");
 	PTHREAD_MUTEX_SAFE_LOCK(sCloadTcpServerMutex,OldStatus);
 	if(sCloadTcpServer.m_IsReady)
 	{
@@ -778,6 +781,7 @@ extern void ZFY_CloadServerClose(void)
 {
 	int		i,OldStatus;
 
+	printf("-------ZFY_CloadServerClose------\r\n");
 	PTHREAD_MUTEX_SAFE_LOCK(sCloadTcpServerMutex,OldStatus);
 	if(sCloadTcpServer.m_IsReady)
 	{

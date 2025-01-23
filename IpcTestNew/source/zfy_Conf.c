@@ -28,7 +28,11 @@ typedef struct tSYS_CONFIG_DATABASE
 	DWORD							dwDatabaseSize;												
 	DWORD							dwDatabaseID;												
 	SYSNETCONF						SysNetConfig;																							
-	IPC_CONFIG						IpcConfig;													
+	IPC_CONFIG						IpcConfig;	
+	PRODUCT_CONFIG					ProdConfig;
+	CLOAD_CONFIG					CloadConfig;
+	FTP_CONFIG						FtpConfig;
+	APN_CONFIG						ApnConfig;
 	DWORD							Reserved[512];										
 	DWORD							Md5Alignreverse;											
 	unsigned char					Md5Check[16];												
@@ -172,6 +176,94 @@ extern BOOL ZFY_ConfIpcConfig(BOOL IsSet,PIPC_CONFIG pConfig)
 	else
 	{
 		*pConfig=sSysConfigDatabase.IpcConfig;
+		RetVal=TRUE;
+	}
+	PTHREAD_MUTEX_SAFE_UNLOCK(sLocalMutex,CancelStatus);
+	return RetVal;
+}
+
+extern BOOL ZFY_ConfProdConfig(BOOL IsSet,PPRODUCT_CONFIG pConfig)
+{
+	int 		CancelStatus;
+	BOOL		RetVal;
+
+	if(!sIsInitReady)
+		ZFY_ConfConfigDataBaseInit();
+	PTHREAD_MUTEX_SAFE_LOCK(sLocalMutex,CancelStatus);
+	if(IsSet)
+	{
+		sSysConfigDatabase.ProdConfig=*pConfig;
+		RetVal=ZFY_ConfSaveCurrConfig();
+	}
+	else
+	{
+		*pConfig=sSysConfigDatabase.ProdConfig;
+		RetVal=TRUE;
+	}
+	PTHREAD_MUTEX_SAFE_UNLOCK(sLocalMutex,CancelStatus);
+	return RetVal;
+}
+
+extern BOOL ZFY_ConfCloadConfig(BOOL IsSet,PCLOAD_CONFIG pConfig)
+{
+	int 		CancelStatus;
+	BOOL		RetVal;
+
+	if(!sIsInitReady)
+		ZFY_ConfConfigDataBaseInit();
+	PTHREAD_MUTEX_SAFE_LOCK(sLocalMutex,CancelStatus);
+	if(IsSet)
+	{
+		sSysConfigDatabase.CloadConfig=*pConfig;
+		RetVal=ZFY_ConfSaveCurrConfig();
+	}
+	else
+	{
+		*pConfig=sSysConfigDatabase.CloadConfig;
+		RetVal=TRUE;
+	}
+	PTHREAD_MUTEX_SAFE_UNLOCK(sLocalMutex,CancelStatus);
+	return RetVal;
+}
+
+extern BOOL ZFY_ConfFtpConfig(BOOL IsSet,PFTP_CONFIG pConfig)
+{
+	int 		CancelStatus;
+	BOOL		RetVal;
+
+	if(!sIsInitReady)
+		ZFY_ConfConfigDataBaseInit();
+	PTHREAD_MUTEX_SAFE_LOCK(sLocalMutex,CancelStatus);
+	if(IsSet)
+	{
+		sSysConfigDatabase.FtpConfig=*pConfig;
+		RetVal=ZFY_ConfSaveCurrConfig();
+	}
+	else
+	{
+		*pConfig=sSysConfigDatabase.FtpConfig;
+		RetVal=TRUE;
+	}
+	PTHREAD_MUTEX_SAFE_UNLOCK(sLocalMutex,CancelStatus);
+	return RetVal;
+}
+
+extern BOOL ZFY_ConfApnConfig(BOOL IsSet,PAPN_CONFIG pConfig)
+{
+	int 		CancelStatus;
+	BOOL		RetVal;
+
+	if(!sIsInitReady)
+		ZFY_ConfConfigDataBaseInit();
+	PTHREAD_MUTEX_SAFE_LOCK(sLocalMutex,CancelStatus);
+	if(IsSet)
+	{
+		sSysConfigDatabase.ApnConfig=*pConfig;
+		RetVal=ZFY_ConfSaveCurrConfig();
+	}
+	else
+	{
+		*pConfig=sSysConfigDatabase.ApnConfig;
 		RetVal=TRUE;
 	}
 	PTHREAD_MUTEX_SAFE_UNLOCK(sLocalMutex,CancelStatus);
