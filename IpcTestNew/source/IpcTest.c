@@ -19,7 +19,9 @@ int main(int argc, char **argv)
     int i;  
 	time_t start_time;
 	time_t stop_time;
-	char car_code[5][20];      
+	char car_code[5][20];   
+	char snap_path[64]={0};
+	char rec_path[64]={0};
 	CODE_LIST code_list;
 	IPC_API_CONF IpcApiConf;
 	
@@ -31,15 +33,21 @@ int main(int argc, char **argv)
 	IpcApiConf.strPicPath="/opt/car/pic/";
 	IpcApiConf.strRecPath="/opt/car/rec/";
 	ZFY_IpcInit(&IpcApiConf);
+	
+#if 0
 	ZFY_IpcGetTime(0);
 	ZFY_IpcStartRecord(0);
 	time(&start_time);
 	sleep(10);
 	time(&stop_time);
 	ZFY_IpcStopRecord(0);
-	ZFY_IpcSnapShot("alarm",0);
+	if(ZFY_IpcSnapShot("alarm",0,snap_path))
+		printf("-----snap_path=%s-----\r\n",snap_path);
 	sleep(5);
-	ZFY_IpcLoadRecord(start_time,stop_time,0);
+	if(ZFY_IpcLoadRecord(start_time,stop_time,0,rec_path))
+		printf("-----rec_path=%s-----\r\n",rec_path);
+#endif
+
 	memset(&code_list,0,sizeof(code_list));
 	ZFY_LprProcess("/opt/resource/models/r2_mobile","/opt/resource/images/test_img.jpg",&code_list);
 	for(i=0;i<code_list.CodeNum;i++)
@@ -59,32 +67,25 @@ int main(int argc, char **argv)
 	ZFY_LprProcess("/opt/resource/models/r2_mobile","/opt/car/c.jpg",&code_list);
 	for(i=0;i<code_list.CodeNum;i++)
 		printf("-----code=%s-----\r\n",code_list.CodeList[i]);
-	
+
 	{
 		IPC_CONFIG ipc_conf;
+		struct in_addr 	Addr;
 		
 		ZFY_ConfConfigDataBaseInit();
-		
 		memset(&ipc_conf,0,sizeof(ipc_conf));
 		ZFY_ConfIpcConfig(FALSE,&ipc_conf);
-		printf("-------ipc--ip=0x%x--\r\n",ipc_conf.IpcIp);
+		Addr.s_addr=htonl(ipc_conf.IpcIp);
+		printf("-------ipc--ip=%s--\r\n",(char *)inet_ntoa(Addr));
 		printf("-------ipc--port=%d--\r\n",ipc_conf.IpcPort);
 		printf("-------ipc--user=%s--\r\n",ipc_conf.IpcUser);
 		printf("-------ipc--pass=%s--\r\n",ipc_conf.IpcPwd);
-		ipc_conf.IpcPort=88;
-		strcpy(ipc_conf.IpcUser,"admin123");
-		strcpy(ipc_conf.IpcPwd,"123456");
-		ZFY_ConfIpcConfig(TRUE,&ipc_conf);
-		ZFY_ConfIpcConfig(FALSE,&ipc_conf);
-		printf("----2---ipc--ip=0x%x--\r\n",ipc_conf.IpcIp);
-		printf("----2---ipc--port=%d--\r\n",ipc_conf.IpcPort);
-		printf("----2---ipc--user=%s--\r\n",ipc_conf.IpcUser);
-		printf("----2---ipc--pass=%s--\r\n",ipc_conf.IpcPwd);
+		printf("-------AlarmFlag=%d-------------\r\n",ipc_conf.AlarmFlag);
 	}
 	
 	{
 		ZFY_RolaDevOpen();
-		sleep(10);
+		sleep(90);
 		ZFY_RolaDevClose();
 	}
 	

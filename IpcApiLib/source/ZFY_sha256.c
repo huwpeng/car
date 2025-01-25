@@ -23,18 +23,18 @@
  *
  *  http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf
  */
-#define JSYA_SHA256_C
+#define ZFY_SHA256_C
 
-#if defined(JSYA_SHA256_C)
+#if defined(ZFY_SHA256_C)
 
 #include "ZFY_sha256.h"
 #include <string.h>
 
 
-#if !defined(JSYA_SHA256_ALT)
+#if !defined(ZFY_SHA256_ALT)
 
 /* Implementation that should never be optimized out by the compiler */
-static void jsya_zeroize( void *v, size_t n ) 
+static void zfy_zeroize( void *v, size_t n ) 
 {
     volatile unsigned char *p = v; while( n-- ) *p++ = 0;
 }
@@ -62,20 +62,20 @@ do {                                                    \
 } while( 0 )
 #endif
 
-void jsya_sha256_init( jsya_sha256_context *ctx )
+void zfy_sha256_init( zfy_sha256_context *ctx )
 {
-    memset( ctx, 0, sizeof( jsya_sha256_context ) );
+    memset( ctx, 0, sizeof( zfy_sha256_context ) );
 }
 
-void jsya_sha256_free( jsya_sha256_context *ctx )
+void zfy_sha256_free( zfy_sha256_context *ctx )
 {
     if( ctx == NULL )
         return;
 
-    jsya_zeroize( ctx, sizeof( jsya_sha256_context ) );
+    zfy_zeroize( ctx, sizeof( zfy_sha256_context ) );
 }
 
-void jsya_sha256_clone( jsya_sha256_context *dst, const jsya_sha256_context *src )
+void zfy_sha256_clone( zfy_sha256_context *dst, const zfy_sha256_context *src )
 {
     *dst = *src;
 }
@@ -83,7 +83,7 @@ void jsya_sha256_clone( jsya_sha256_context *dst, const jsya_sha256_context *src
 /*
  * SHA-256 context setup
  */
-void jsya_sha256_starts( jsya_sha256_context *ctx, int is224 )
+void zfy_sha256_starts( zfy_sha256_context *ctx, int is224 )
 {
     ctx->total[0] = 0;
     ctx->total[1] = 0;
@@ -161,7 +161,7 @@ static const uint32_t K[] =
     d += temp1; h = temp1 + temp2;              \
 }
 
-void jsya_sha256_process( jsya_sha256_context *ctx, const unsigned char data[64] )
+void zfy_sha256_process( zfy_sha256_context *ctx, const unsigned char data[64] )
 {
     uint32_t temp1, temp2, W[64];
     uint32_t A[8];
@@ -170,7 +170,7 @@ void jsya_sha256_process( jsya_sha256_context *ctx, const unsigned char data[64]
     for( i = 0; i < 8; i++ )
         A[i] = ctx->state[i];
 
-#if defined(JSYA_SHA256_SMALLER)
+#if defined(ZFY_SHA256_SMALLER)
     for( i = 0; i < 64; i++ )
     {
         if( i < 16 )
@@ -220,7 +220,7 @@ void jsya_sha256_process( jsya_sha256_context *ctx, const unsigned char data[64]
 /*
  * SHA-256 process buffer
  */
-void jsya_sha256_update( jsya_sha256_context *ctx, const unsigned char *input, size_t ilen )
+void zfy_sha256_update( zfy_sha256_context *ctx, const unsigned char *input, size_t ilen )
 {
     size_t fill;
     uint32_t left;
@@ -240,7 +240,7 @@ void jsya_sha256_update( jsya_sha256_context *ctx, const unsigned char *input, s
     if( left && ilen >= fill )
     {
         memcpy( (void *) (ctx->buffer + left), input, fill );
-        jsya_sha256_process( ctx, ctx->buffer );
+        zfy_sha256_process( ctx, ctx->buffer );
         input += fill;
         ilen  -= fill;
         left = 0;
@@ -248,7 +248,7 @@ void jsya_sha256_update( jsya_sha256_context *ctx, const unsigned char *input, s
 
     while( ilen >= 64 )
     {
-        jsya_sha256_process( ctx, input );
+        zfy_sha256_process( ctx, input );
         input += 64;
         ilen  -= 64;
     }
@@ -268,7 +268,7 @@ static const unsigned char sha256_padding[64] =
 /*
  * SHA-256 final digest
  */
-void jsya_sha256_finish( jsya_sha256_context *ctx, unsigned char output[32] )
+void zfy_sha256_finish( zfy_sha256_context *ctx, unsigned char output[32] )
 {
     uint32_t last, padn;
     uint32_t high, low;
@@ -284,8 +284,8 @@ void jsya_sha256_finish( jsya_sha256_context *ctx, unsigned char output[32] )
     last = ctx->total[0] & 0x3F;
     padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
 
-    jsya_sha256_update( ctx, sha256_padding, padn );
-    jsya_sha256_update( ctx, msglen, 8 );
+    zfy_sha256_update( ctx, sha256_padding, padn );
+    zfy_sha256_update( ctx, msglen, 8 );
 
     PUT_UINT32_BE( ctx->state[0], output,  0 );
     PUT_UINT32_BE( ctx->state[1], output,  4 );
@@ -302,18 +302,18 @@ void jsya_sha256_finish( jsya_sha256_context *ctx, unsigned char output[32] )
 /*
  * output = SHA-256( input buffer )
  */
-void jsya_sha256( const unsigned char *input, size_t ilen, unsigned char output[32], int is224 )
+void zfy_sha256( const unsigned char *input, size_t ilen, unsigned char output[32], int is224 )
 {
-    jsya_sha256_context ctx;
+    zfy_sha256_context ctx;
 
-    jsya_sha256_init( &ctx );
-    jsya_sha256_starts( &ctx, is224 );
-    jsya_sha256_update( &ctx, input, ilen );
-    jsya_sha256_finish( &ctx, output );
-    jsya_sha256_free( &ctx );
+    zfy_sha256_init( &ctx );
+    zfy_sha256_starts( &ctx, is224 );
+    zfy_sha256_update( &ctx, input, ilen );
+    zfy_sha256_finish( &ctx, output );
+    zfy_sha256_free( &ctx );
 }
 
-#if defined(JSYA_SELF_TEST)
+#if defined(ZFY_SELF_TEST)
 /*
  * FIPS-180-2 test vectors
  */
@@ -367,12 +367,12 @@ static const unsigned char sha256_test_sum[6][32] =
 /*
  * Checkup routine
  */
-int jsya_sha256_self_test( int verbose )
+int zfy_sha256_self_test( int verbose )
 {
     int i, j, k, buflen, ret = 0;
     unsigned char *buf;
     unsigned char sha256sum[32];
-    jsya_sha256_context ctx;
+    zfy_sha256_context ctx;
 
     buf = calloc( 1024, sizeof(unsigned char) );
     if( NULL == buf )
@@ -383,7 +383,7 @@ int jsya_sha256_self_test( int verbose )
         return( 1 );
     }
 
-    jsya_sha256_init( &ctx );
+    zfy_sha256_init( &ctx );
 
     for( i = 0; i < 6; i++ )
     {
@@ -393,19 +393,19 @@ int jsya_sha256_self_test( int verbose )
         if( verbose != 0 )
             printf( "  SHA-%d test #%d: ", 256 - k * 32, j + 1 );
 
-        jsya_sha256_starts( &ctx, k );
+        zfy_sha256_starts( &ctx, k );
 
         if( j == 2 )
         {
             memset( buf, 'a', buflen = 1000 );
 
             for( j = 0; j < 1000; j++ )
-                jsya_sha256_update( &ctx, buf, buflen );
+                zfy_sha256_update( &ctx, buf, buflen );
         }
         else
-            jsya_sha256_update( &ctx, sha256_test_buf[j], sha256_test_buflen[j] );
+            zfy_sha256_update( &ctx, sha256_test_buf[j], sha256_test_buflen[j] );
 
-        jsya_sha256_finish( &ctx, sha256sum );
+        zfy_sha256_finish( &ctx, sha256sum );
 
         if( memcmp( sha256sum, sha256_test_sum[i], 32 - k * 4 ) != 0 )
         {
@@ -424,7 +424,7 @@ int jsya_sha256_self_test( int verbose )
         printf( "\n" );
 
 exit:
-    jsya_sha256_free( &ctx );
+    zfy_sha256_free( &ctx );
     free( buf );
 
     return( ret );

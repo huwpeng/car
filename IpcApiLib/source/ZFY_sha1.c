@@ -54,19 +54,19 @@
 }
 #endif
 
-void jsya_sha1_init( jsya_sha1_context *ctx )
+void zfy_sha1_init( zfy_sha1_context *ctx )
 {
-    memset( ctx, 0, sizeof( jsya_sha1_context ) );
+    memset( ctx, 0, sizeof( zfy_sha1_context ) );
 }
 
-void jsya_sha1_free( jsya_sha1_context *ctx )
+void zfy_sha1_free( zfy_sha1_context *ctx )
 {
     if( ctx == NULL )
         return;
-    memset( ctx, 0, sizeof( jsya_sha1_context ) );
+    memset( ctx, 0, sizeof( zfy_sha1_context ) );
 }
 
-void jsya_sha1_clone( jsya_sha1_context *dst, const jsya_sha1_context *src )
+void zfy_sha1_clone( zfy_sha1_context *dst, const zfy_sha1_context *src )
 {
     *dst = *src;
 }
@@ -74,7 +74,7 @@ void jsya_sha1_clone( jsya_sha1_context *dst, const jsya_sha1_context *src )
 /*
  * SHA-1 context setup
  */
-void jsya_sha1_starts( jsya_sha1_context *ctx )
+void zfy_sha1_starts( zfy_sha1_context *ctx )
 {
     ctx->total[0] = 0;
     ctx->total[1] = 0;
@@ -86,7 +86,7 @@ void jsya_sha1_starts( jsya_sha1_context *ctx )
     ctx->state[4] = 0xC3D2E1F0;
 }
 
-void jsya_sha1_process( jsya_sha1_context *ctx, const unsigned char data[64] )
+void zfy_sha1_process( zfy_sha1_context *ctx, const unsigned char data[64] )
 {
     uint32_t temp, W[16], A, B, C, D, E;
 
@@ -246,7 +246,7 @@ void jsya_sha1_process( jsya_sha1_context *ctx, const unsigned char data[64] )
 /*
  * SHA-1 process buffer
  */
-void jsya_sha1_update( jsya_sha1_context *ctx, const unsigned char *input, size_t ilen )
+void zfy_sha1_update( zfy_sha1_context *ctx, const unsigned char *input, size_t ilen )
 {
     size_t fill;
     uint32_t left;
@@ -266,7 +266,7 @@ void jsya_sha1_update( jsya_sha1_context *ctx, const unsigned char *input, size_
     if( left && ilen >= fill )
     {
         memcpy( (void *) (ctx->buffer + left), input, fill );
-        jsya_sha1_process( ctx, ctx->buffer );
+        zfy_sha1_process( ctx, ctx->buffer );
         input += fill;
         ilen  -= fill;
         left = 0;
@@ -274,7 +274,7 @@ void jsya_sha1_update( jsya_sha1_context *ctx, const unsigned char *input, size_
 
     while( ilen >= 64 )
     {
-        jsya_sha1_process( ctx, input );
+        zfy_sha1_process( ctx, input );
         input += 64;
         ilen  -= 64;
     }
@@ -294,7 +294,7 @@ static const unsigned char sha1_padding[64] =
 /*
  * SHA-1 final digest
  */
-void jsya_sha1_finish( jsya_sha1_context *ctx, unsigned char output[20] )
+void zfy_sha1_finish( zfy_sha1_context *ctx, unsigned char output[20] )
 {
     uint32_t last, padn;
     uint32_t high, low;
@@ -310,8 +310,8 @@ void jsya_sha1_finish( jsya_sha1_context *ctx, unsigned char output[20] )
     last = ctx->total[0] & 0x3F;
     padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
 
-    jsya_sha1_update( ctx, sha1_padding, padn );
-    jsya_sha1_update( ctx, msglen, 8 );
+    zfy_sha1_update( ctx, sha1_padding, padn );
+    zfy_sha1_update( ctx, msglen, 8 );
 
     PUT_UINT32_BE( ctx->state[0], output,  0 );
     PUT_UINT32_BE( ctx->state[1], output,  4 );
@@ -323,14 +323,14 @@ void jsya_sha1_finish( jsya_sha1_context *ctx, unsigned char output[20] )
 /*
  * output = SHA-1( input buffer )
  */
-void jsya_sha1( const unsigned char *input, size_t ilen, unsigned char output[20] )
+void zfy_sha1( const unsigned char *input, size_t ilen, unsigned char output[20] )
 {
-    jsya_sha1_context ctx;
+    zfy_sha1_context ctx;
 
-    jsya_sha1_init( &ctx );
-    jsya_sha1_starts( &ctx );
-    jsya_sha1_update( &ctx, input, ilen );
-    jsya_sha1_finish( &ctx, output );
-    jsya_sha1_free( &ctx );
+    zfy_sha1_init( &ctx );
+    zfy_sha1_starts( &ctx );
+    zfy_sha1_update( &ctx, input, ilen );
+    zfy_sha1_finish( &ctx, output );
+    zfy_sha1_free( &ctx );
 }
 

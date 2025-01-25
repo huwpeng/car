@@ -43,6 +43,11 @@
 #include "aes.h"
 
 
+/*
+ ************************************************************************************************************************************************************************
+ * 常数定义
+ ************************************************************************************************************************************************************************
+*/
 #define SER_DEV_NAME	"/dev/ttyS3"
 
 #define SER_DEV_OUTPUT_QUEUE_SIZE				64
@@ -61,11 +66,18 @@
 #define SER_DEV_MAX_RETRY_COUNT						180
 #define SER_DEV_UART_BAUDRATE						9600
 
+
+/*
+ ************************************************************************************************************************************************************************
+ 类型定义
+ ************************************************************************************************************************************************************************
+*/
 typedef struct tSER_DEV_BAUD_RATE_PAIR
 {
 	int				BaudRateFlag;
 	DWORD			BaudRateVal;
 }SER_DEV_BAUD_RATE_PAIR,*PSER_DEV_BAUD_RATE_PAIR;
+
 static const SER_DEV_BAUD_RATE_PAIR	sSerDevBaudRateTab[]=
 {
 	{B50,50},{B75,75},{B110,110},{B134,134},{B150,150},{B200,200},{B300,300},{B600,600},
@@ -176,10 +188,14 @@ typedef struct tSER_DEV_INPUT_QUEUE
 }SER_DEV_INPUT_QUEUE,*PSER_DEV_INPUT_QUEUE;
 
 
-static pthread_mutex_t	sSerProMutex				= PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t	sSerDevMutex				= PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t	sSerDevHwMutex				= PTHREAD_MUTEX_INITIALIZER;
-
+/*
+ ************************************************************************************************************************************************************************
+ * 全局变量
+ ************************************************************************************************************************************************************************
+*/
+static pthread_mutex_t	sSerProMutex=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t	sSerDevMutex=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t	sSerDevHwMutex=PTHREAD_MUTEX_INITIALIZER;
 static SER_DEV_SERVER	sSerDevServer;
 
 static pthread_mutex_t		sSerOutputQueueMutex=PTHREAD_MUTEX_INITIALIZER;
@@ -188,6 +204,11 @@ static SER_DEV_OUTPUT_QUEUE	sSerDevOutputQueue;
 static SER_DEV_INPUT_QUEUE	sSerDevInputQueue;
 
 
+/*
+ ****************************************************************************************************************************************************
+ * 函数定义
+ *****************************************************************************************************************************************************
+*/
 static int SerDevHwUnitOpen(const char *pName,const PSER_UNIT_LOCAL_SET pConfig)
 {
 	int						DevHandle=STD_INVALID_HANDLE;
@@ -205,7 +226,7 @@ static int SerDevHwUnitOpen(const char *pName,const PSER_UNIT_LOCAL_SET pConfig)
 		{
 			serial.flags |= ASYNC_LOW_LATENCY;
 			if(ioctl(DevHandle,TIOCSSERIAL,&serial)!=STD_SUCCESS)
-				JSYA_LES_LogPrintf("ROLA",LOG_EVENT_LEVEL_WARNING,"serial ioctl (%s)...\r\n",pName,strerror(errno));
+				ZFY_LES_LogPrintf("ROLA",LOG_EVENT_LEVEL_WARNING,"serial ioctl (%s)...\r\n",pName,strerror(errno));
 		}
 	}
 	if(tcgetattr(DevHandle,&Option)!=STD_SUCCESS)
@@ -754,12 +775,12 @@ static void LoraParseRecvData(BYTE *pBuf,DWORD Len)
 					case 0x0C:
 						break;
 					default:
-						JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"***protocol(Cmd=0x%X)...\r\n",RecvBuf[i+3]);
+						ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"***protocol(Cmd=0x%X)...\r\n",RecvBuf[i+3]);
 						break;
 					}
 				}
 				//else
-				//	JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"***unspported protocol(Addr=0x%X)...\r\n",RecvBuf[i+1]);
+				//	ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"***unspported protocol(Addr=0x%X)...\r\n",RecvBuf[i+1]);
 				PTHREAD_MUTEX_SAFE_UNLOCK(sSerProMutex,OldStatus);
 				
 				i += TempLen;
@@ -786,7 +807,7 @@ static void *SerDevUnitRecvThread(void *pArg)
 	fd_set						WriteSet,ReadSet;
 
 	printf("-------SerDevUnitRecvThread-------\r\n");
-	JSYA_LES_LogPrintf("ROLA",LOG_EVENT_LEVEL_INFO,"******lora serial(PID=%d,PTID=%u) recv...\r\n"
+	ZFY_LES_LogPrintf("ROLA",LOG_EVENT_LEVEL_INFO,"******lora serial(PID=%d,PTID=%u) recv...\r\n"
 		,getpid(),pthread_self());
 	pConfig=&sSerDevServer.UnitSet;
 	pStatus=&sSerDevServer.UnitStatus;
@@ -860,7 +881,7 @@ static void *SerDevUnitSendThread(void *pArg)
 	BYTE					LocalBuf[1024];
 
 	printf("-------SerDevUnitSendThread-------\r\n");
-	JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_INFO,"******rola serial send(PID=%d,PTID=%u)...\r\n"
+	ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_INFO,"******rola serial send(PID=%d,PTID=%u)...\r\n"
 		,getpid(),pthread_self());
 	pConfig=&sSerDevServer.UnitSet;
 	pStatus=&sSerDevServer.UnitStatus;
@@ -960,7 +981,7 @@ static void SerDevManagerThreadExit(void *pArg)
 		pServer->UnitStatus.DevDrvHandle=STD_INVALID_HANDLE;
 	}
 	pServer->IsReqQuit=FALSE;
-	JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial managerex...\r\n");
+	ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial managerex...\r\n");
 }
 
 static void *SerDevManagerThread(void *pArg)
@@ -969,7 +990,7 @@ static void *SerDevManagerThread(void *pArg)
 	int					i=0,CancelStatus,RetryCount,ReportTime,InfCheckTime=0;
 	BOOL				IsRestore=FALSE;
 	
-	JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_INFO,"******lora serial manager(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
+	ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_INFO,"******lora serial manager(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
 	
 	printf("-------SerDevManagerThread-------\r\n");
 	pServer->UnitStatus.DevDrvHandle=STD_INVALID_HANDLE;
@@ -983,7 +1004,6 @@ static void *SerDevManagerThread(void *pArg)
 	pthread_cleanup_push(SerDevManagerThreadExit,pServer);
 	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED,NULL);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,NULL);
-	printf("-------SerDevManagerThread---000----\r\n");
 	for(RetryCount=0;;)
 	{
 		if(pServer->IsReqQuit)
@@ -992,23 +1012,20 @@ static void *SerDevManagerThread(void *pArg)
 			break;
 		}
 		pthread_testcancel();
-		printf("-------SerDevManagerThread---000111----\r\n");
 		PTHREAD_MUTEX_SAFE_LOCK(sSerDevHwMutex,CancelStatus);
 		if(pServer->UnitStatus.DevDrvHandle==STD_INVALID_HANDLE)
 		{
 			memset(pServer->UnitStatus.UartDevName,0,sizeof(pServer->UnitStatus.UartDevName));
 			strcpy(pServer->UnitStatus.UartDevName,SER_DEV_NAME);
 			pServer->UnitStatus.DevDrvHandle=SerDevHwUnitOpen(pServer->UnitStatus.UartDevName,&pServer->UnitSet);
-			printf("-------SerDevManagerThread----111---\r\n");
 		}
 		PTHREAD_MUTEX_SAFE_UNLOCK(sSerDevHwMutex,CancelStatus);
 		if(pServer->UnitStatus.DevDrvHandle==STD_INVALID_HANDLE)
 		{
-			JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_ERR,"lora serial(Name=%s) open failed...\r\n",pServer->UnitStatus.UartDevName);
+			ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_ERR,"lora serial(Name=%s) open failed...\r\n",pServer->UnitStatus.UartDevName);
 			sleep(1);
 			break;
 		}
-		printf("-------SerDevManagerThread---222----\r\n");
 		if(pServer->UnitStatus.SendThreadID==INVALID_PTHREAD_ID)
 		{
 			pthread_attr_t		ThreadAttr;
@@ -1025,7 +1042,7 @@ static void *SerDevManagerThread(void *pArg)
 			{
 				pthread_attr_destroy(&ThreadAttr);
 				pServer->UnitStatus.SendThreadID=INVALID_PTHREAD_ID;
-				JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"rola serial send thread failed(Name=%s)...\r\n",pServer->UnitStatus.UartDevName);
+				ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"rola serial send thread failed(Name=%s)...\r\n",pServer->UnitStatus.UartDevName);
 				sleep(1);
 				break;
 			}
@@ -1048,7 +1065,7 @@ static void *SerDevManagerThread(void *pArg)
 			{
 				pthread_attr_destroy(&ThreadAttr);
 				pServer->UnitStatus.RecvThreadID=INVALID_PTHREAD_ID;
-				JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"rola serial recv thread failed(Name=%s)...\r\n",pServer->UnitStatus.UartDevName);
+				ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"rola serial recv thread failed(Name=%s)...\r\n",pServer->UnitStatus.UartDevName);
 				sleep(1);
 				break;
 			}
@@ -1111,7 +1128,7 @@ static void *SerDevManagerThread(void *pArg)
 				pServer->UnitStatus.IsInError=FALSE;
 				pServer->UnitStatus.ErrorCount++;
 				IsRestore=TRUE;
-				JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_ERR,"rola serial restore(Name=%s)...\r\n",pServer->UnitStatus.UartDevName);
+				ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_ERR,"rola serial restore(Name=%s)...\r\n",pServer->UnitStatus.UartDevName);
 			}
 
 			if(IsRestore)
@@ -1135,13 +1152,14 @@ static void *AlarmProcThread(void *pArg)
 	int					i=0,CancelStatus,RetryCount,ReportTime,InfCheckTime=0;
 	BOOL				IsRestore=FALSE;
 	
-	JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_INFO,"******lora serial alarm(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
+	ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_INFO,"******lora serial alarm(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
 	
 	printf("-------AlarmProcThread-------\r\n");
 	
 	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED,NULL);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,NULL);
 	printf("-------AlarmProcThread---000----\r\n");
+	pServer->IsAlarmTrig=TRUE;
 	for(RetryCount=0;;)
 	{
 		if(pServer->IsReqAlarmQuit)
@@ -1153,33 +1171,68 @@ static void *AlarmProcThread(void *pArg)
 		
 		if(pServer->IsAlarmTrig)
 		{
+			IPC_CONFIG	IpcConf;
 			IPC_API_CONF IpcApiConf;
+			struct in_addr 	Addr;
+			char snap_path[64]={0};
+			char rec_path[64]={0};
 			time_t start_time;
 			time_t stop_time;
 	
+			memset(&IpcConf,0,sizeof(IpcConf));
 			memset(&IpcApiConf,0,sizeof(IpcApiConf));
-			IpcApiConf.strIpcServerIP="192.168.8.108";
-			IpcApiConf.IpcServerPort=80;
-			IpcApiConf.strLoginUser="admin";
-			IpcApiConf.strLoginPwd="123456abc";
+			ZFY_ConfIpcConfig(FALSE,&IpcConf);
+			Addr.s_addr=htonl(IpcConf.IpcIp);
+			IpcApiConf.strIpcServerIP=(char *)inet_ntoa(Addr);
+			IpcApiConf.IpcServerPort=IpcConf.IpcPort;
+			IpcApiConf.strLoginUser=IpcConf.IpcUser;
+			IpcApiConf.strLoginPwd=IpcConf.IpcPwd;
 			IpcApiConf.strPicPath="/opt/car/pic/";
 			IpcApiConf.strRecPath="/opt/car/rec/";
 			ZFY_IpcInit(&IpcApiConf);
 			ZFY_IpcGetTime(0);
 			ZFY_IpcStartRecord(0);
 			time(&start_time);
+			ZFY_IpcSnapShot("alarm",0,IpcConf.CapPath[0]);
+			printf("------IpcConf.CapPath[0]=%s-----\r\n",IpcConf.CapPath[0]);
+			sleep(5);
+			ZFY_IpcSnapShot("alarm",0,IpcConf.CapPath[1]);
+			printf("------IpcConf.CapPath[1]=%s-----\r\n",IpcConf.CapPath[1]);
+			sleep(5);
+			ZFY_IpcSnapShot("alarm",0,IpcConf.CapPath[2]);
+			printf("------IpcConf.CapPath[2]=%s-----\r\n",IpcConf.CapPath[2]);
+			sleep(5);
+			ZFY_IpcSnapShot("alarm",0,IpcConf.CapPath[3]);
+			printf("------IpcConf.CapPath[3]=%s-----\r\n",IpcConf.CapPath[3]);
+			sleep(5);
+			ZFY_IpcSnapShot("alarm",0,IpcConf.CapPath[4]);
+			printf("------IpcConf.CapPath[4]=%s-----\r\n",IpcConf.CapPath[4]);
+			sleep(5);
 			sleep(10);
 			time(&stop_time);
 			ZFY_IpcStopRecord(0);
-			ZFY_IpcSnapShot("alarm",0);
-			sleep(5);
-			ZFY_IpcLoadRecord(start_time,stop_time,0);
+			ZFY_IpcLoadRecord(start_time,stop_time,0,IpcConf.RecordPath[0]);
+			printf("------IpcConf.RecordPath[0]=%s-----\r\n",IpcConf.RecordPath[0]);
+			IpcConf.AlarmFlag=1;
+			ZFY_ConfIpcConfig(TRUE,&IpcConf);
 			pServer->IsAlarmTrig=FALSE;
 		}
 	}
 	
 }
 
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_RolaDevOpen
+ *功能描述: ROLA模块打开
+ *输入描述: 无
+ *输出描述: 无
+ *返回描述: 无
+ *作者日期: LJJ/2024/12/02
+ *全局声明: sSerDevMutex,sSerDevServer
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
 extern BOOL ZFY_RolaDevOpen(void)
 {
 	int							OldStatus;
@@ -1193,7 +1246,7 @@ extern BOOL ZFY_RolaDevOpen(void)
 	if(sSerDevServer.IsInitReady)
 	{
 		PTHREAD_MUTEX_SAFE_UNLOCK(sSerDevMutex,OldStatus);
-		JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"rola serial have ready...\r\n");
+		ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"rola serial have ready...\r\n");
 		return TRUE;
 	}
 	memset(&sSerDevServer,0,sizeof(sSerDevServer));
@@ -1226,7 +1279,7 @@ extern BOOL ZFY_RolaDevOpen(void)
 	if(!SerDevQueueInit())
 	{
 		PTHREAD_MUTEX_SAFE_UNLOCK(sSerDevMutex,OldStatus);
-		JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"rola serial queue init failed...\r\n");
+		ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"rola serial queue init failed...\r\n");
 		return FALSE;
 	}
 	printf("-------ZFY_RolaDevOpen--111-----\r\n");
@@ -1242,7 +1295,7 @@ extern BOOL ZFY_RolaDevOpen(void)
 		SerDevQueueUnInit(TRUE);
 		pthread_attr_destroy(&ThreadAttr);
 		PTHREAD_MUTEX_SAFE_UNLOCK(sSerDevMutex,OldStatus);
-		JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial manager thread create failed...\r\n");
+		ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial manager thread create failed...\r\n");
 		return FALSE;
 	}
 	if(pthread_create(&sSerDevServer.AlarmThreadID,NULL,AlarmProcThread,&sSerDevServer)!=STD_SUCCESS)
@@ -1250,7 +1303,7 @@ extern BOOL ZFY_RolaDevOpen(void)
 		SerDevQueueUnInit(TRUE);
 		pthread_attr_destroy(&ThreadAttr);
 		PTHREAD_MUTEX_SAFE_UNLOCK(sSerDevMutex,OldStatus);
-		JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial alarm thread create failed...\r\n");
+		ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial alarm thread create failed...\r\n");
 		return FALSE;
 	}
 	printf("-------ZFY_RolaDevOpen---222----\r\n");
@@ -1260,6 +1313,18 @@ extern BOOL ZFY_RolaDevOpen(void)
 	return TRUE;
 }
 
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_RolaDevClose
+ *功能描述: ROLA模块关闭
+ *输入描述: 无
+ *输出描述: 无
+ *返回描述: 无
+ *作者日期: LJJ/2024/12/02
+ *全局声明: sSerDevMutex,sSerDevServer
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
 extern void ZFY_RolaDevClose(void)
 {
 	int	OldStatus;
@@ -1269,7 +1334,7 @@ extern void ZFY_RolaDevClose(void)
 	{
 		if(!pthread_equal(pthread_self(),sSerDevServer.CallerThread))
 		{
-			JSYA_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial close(0x%X,0x%X)...\r\n",(unsigned int)pthread_self()
+			ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"lora serial close(0x%X,0x%X)...\r\n",(unsigned int)pthread_self()
 				,(unsigned int)sSerDevServer.CallerThread);
 		}
 		sSerDevServer.IsReqQuit=TRUE;
@@ -1292,6 +1357,18 @@ extern void ZFY_RolaDevClose(void)
 	PTHREAD_MUTEX_SAFE_UNLOCK(sSerDevMutex,OldStatus);
 }
 
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_RolaWriteData
+ *功能描述: ROLA模块发送数据
+ *输入描述: 数据缓冲区,数据长度,溢出标志,超时
+ *输出描述: 无
+ *返回描述: 无
+ *作者日期: LJJ/2024/12/02
+ *全局声明: sSerDevMutex,sSerDevServer
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
 extern BOOL ZFY_RolaWriteData(const void *pBuf,DWORD dwSize,BOOL IsAutoOver,const DWORD *pTimeOutMS)
 {
 	int						OldStatus,CancelStatus;
@@ -1388,6 +1465,18 @@ extern BOOL ZFY_RolaWriteData(const void *pBuf,DWORD dwSize,BOOL IsAutoOver,cons
 	return TRUE;
 }
 
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_RolaReadData
+ *功能描述: ROLA模块接收数据
+ *输入描述: 数据缓冲区,数据长度,超时
+ *输出描述: 无
+ *返回描述: 无
+ *作者日期: LJJ/2024/12/02
+ *全局声明: sSerDevMutex,sSerDevServer
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
 extern BOOL ZFY_RolaReadData(void *pBuf,DWORD *pBufSize,const DWORD *pTimeOutMS)
 {
 	int						Ret,OldStatus,CancelStatus;

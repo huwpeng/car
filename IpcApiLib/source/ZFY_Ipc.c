@@ -108,7 +108,7 @@ typedef struct tIPC_SERVER
 	BOOL		IsReqWatchQuit;
 	pthread_t	ptWatchThreadID;
 	char		m_FSUID[48];
-	unsigned short int	m_IpcServerPort;
+	short 		m_IpcServerPort;
 	char		m_strIpcServerIP[32];
 	char		m_strLoginUser[32];
 	char		m_strLoginPwd[32];
@@ -142,83 +142,6 @@ static IPC_SERVER				sIpcServer;
  * 函数定义
  *****************************************************************************************************************************************************
 */
-static char* Rstrchr(char* s,char x)    
-{ 
-    int i = strlen(s); 
-    if(!(*s)) 
-    {
-        return 0; 
-    }
-    while(s[i-1])  
-    {
-        if(strchr(s+(i-1), x))     
-        {
-            return (s+(i-1));    
-        }
-        else  
-        {
-            i--;
-        }
-    }
-    return 0; 
-}
-
-static void ToLowerCase(char* s)    
-{ 
-    while(*s && *s!='\0' )    
-    {
-        *s=tolower(*s++); 
-    }
-    *s = '\0';
-}
-
-static void HexToStr(const BYTE *oBuf, BYTE *dBuf, const DWORD oLen, const BOOL IsCapital)
-{
-	DWORD	i;
-	BYTE	ProtData=0;
-
-	if((oBuf!=NULL) && (dBuf!=NULL))
-	{
-		if(IsCapital) 
-		{
-			for(i=0;i<oLen;i++)
-			{
-				if(i==(oLen-1))
-				{
-					ProtData = dBuf[i*2+2];
-				}
-				sprintf(&dBuf[i*2],"%0.2X",oBuf[i]);
-			}
-			dBuf[i*2] = ProtData;
-		}
-		else
-		{
-			for(i=0;i<oLen;i++)
-			{
-				if(i==(oLen-1))
-				{
-					ProtData = dBuf[i*2+2];
-				}
-				sprintf(&dBuf[i*2],"%0.2x",oBuf[i]);
-			}
-			dBuf[i*2] = ProtData;
-		}
-	}
-}
-
-static void StrToHex(const BYTE *oBuf, BYTE *dBuf, const DWORD oLen)
-{
-	DWORD	i;
-	BYTE	TempBuf[3];
-
-	memset(TempBuf,0,sizeof(TempBuf));
-	for(i=0;i<(oLen/2);i++)
-	{
-		memcpy(TempBuf,&oBuf[i*2],2);
-		dBuf[i]	= strtoul(TempBuf,NULL,16);
-	}
-}
-
 static int blockUntilReadable(int socket) 
 {
 	fd_set rd_set;
@@ -242,12 +165,12 @@ static int blockUntilReadable(int socket)
 		} 
 		else if (result <= 0) 
 		{
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"select() error\n ");
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"select() error\n ");
 			break;
 		}
 		if (!FD_ISSET(socket, &rd_set)) 
 		{
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"select() error - !FD_ISSET\n");
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"select() error - !FD_ISSET\n");
 			break;
 		}	
 	} while (0);
@@ -276,7 +199,7 @@ static int parseResponseCode(char* line, unsigned int * responseCode)
 {
 	if (sscanf(line, "%*s%u", responseCode) != 1) 
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in line\n");
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in line\n");
 		return -1;
 	}
 	return 0;
@@ -299,18 +222,18 @@ static int getResponse(int socketNum,char* responseBuffer,unsigned responseBuffe
 		lastToCheck=NULL;
 		if(blockUntilReadable(fSocketNum)<=0)
 		{
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"socket is unreadable\n");
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"socket is unreadable\n");
 			break;
 		}
 		bytesReadNow=recv(fSocketNum,(unsigned char*)(responseBuffer+bytesRead),responseBufferSize-bytesRead,0);
 		if(bytesReadNow<0) 
 		{
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"HTTP response was truncated\n");
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"HTTP response was truncated\n");
 			break;
 		}
 		else if(bytesReadNow==0)
 		{
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"HTTP response recv OK end\n");
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"HTTP response recv OK end\n");
 			break;
 		}
 		else
@@ -318,8 +241,6 @@ static int getResponse(int socketNum,char* responseBuffer,unsigned responseBuffe
 	}
 	return bytesRead;
 }
-
-
 
 static BOOL CreateDigestRandom(char *pRandom,int RandomLen)
 {
@@ -443,7 +364,7 @@ static BOOL IpcLoginCapParse(char *pRecvData,DWORD DataLen,IPC_LOGIN_CAP *pLogin
 	if(err!=IKS_OK)
 	{
 		iks_delete(x);
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"系统IPC LoginCap 树形分析失败...\r\n");
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"系统IPC LoginCap 树形分析失败...\r\n");
 		return FALSE;
 	}
 	if(x==NULL)
@@ -498,7 +419,7 @@ static BOOL IpcSessionParse(char *pRecvData,DWORD DataLen,IPC_SESSION *pSession)
 	if(err!=IKS_OK)
 	{
 		iks_delete(x);
-		JSYA_LES_LogPrintf("FSU_IPC",LOG_EVENT_LEVEL_INFO,"系统IPC Session 树形分析失败...\r\n");
+		ZFY_LES_LogPrintf("FSU_IPC",LOG_EVENT_LEVEL_INFO,"系统IPC Session 树形分析失败...\r\n");
 		return FALSE;
 	}
 	if(x==NULL)
@@ -540,7 +461,7 @@ static BOOL IpcSessionParse(char *pRecvData,DWORD DataLen,IPC_SESSION *pSession)
  *特殊说明: 无
  ************************************************************************************************************************************************************************       
 */
-extern BOOL ZFY_IpcLoadRecord(time_t StartRecTime,time_t StopRecTime,DWORD IpcIndex)
+extern BOOL ZFY_IpcLoadRecord(time_t StartRecTime,time_t StopRecTime,DWORD IpcIndex,char *pFileName)
 {
 	static BOOL				IsFsuConfig[SP_SYS_IPC_NUM_MAX];
 	static BOOL				IsDahuaIpc[SP_SYS_IPC_NUM_MAX];
@@ -607,7 +528,7 @@ SnapRetry:
 	server_addr.sin_family=AF_INET;
     server_addr.sin_addr.s_addr=inet_addr(host_addr);
     server_addr.sin_port=htons(portnumber);
- 	JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
+ 	ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
 	sockfd=CreateSocket(SOCKET_TYPE_TCP,SOCKET_TCP_MODE_CLIENT,&LocalAddr,&server_addr,INVALID_DEV_NET_ID);
 	if(sockfd==SOCKET_INVALID_FD)
 		return FALSE;
@@ -672,7 +593,7 @@ Authorization: Basic %s\r\n\
 		send=write(sockfd,request+totalsend,nbytes-totalsend); 
         if(send == -1)     
         {
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
 			BASE64_BUF_FREE(pBase64Buf);
 			KillSocket(&sockfd);
 			return FALSE;
@@ -689,13 +610,13 @@ Authorization: Basic %s\r\n\
 	}
 	else
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
 	}
 	firstLine=buffer;
 	nextLineStart=getLine(firstLine);
 	if(sscanf(firstLine,"%*s%u",&responseCode) != 1) 
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
 		BASE64_BUF_FREE(pBase64Buf);
 		KillSocket(&sockfd);
 		return FALSE;
@@ -724,8 +645,8 @@ Authorization: Basic %s\r\n\
 				nextLineStart=getLine(lineStart);
 				if(nextLineStart!=NULL)
 				{
-					char					BasePathName[1024];
-					char					FilePathName[1024];
+					char					BasePathName[64];
+					char					FilePathName[64];
 					time_t 					rawtime;
 					int						OldStatus;
 					struct 					tm *timeinfo;
@@ -737,7 +658,7 @@ Authorization: Basic %s\r\n\
 					if(contentLength>(unsigned int)(bytesRead-(nextLineStart-buffer)))
 					{
 						write_len=bytesRead-(nextLineStart-buffer);
-						JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try record truncation2...\r\n");
+						ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try record truncation2...\r\n");
 					}
 					else
 					{
@@ -759,16 +680,14 @@ Authorization: Basic %s\r\n\
 					sprintf(BasePathName,"%s_%.4d%.2d%.2d_%.2d%.2d%.2d_%.2d.%s","11",1900+timeinfo->tm_year,
 						1+timeinfo->tm_mon,timeinfo->tm_mday,timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec,CurrPicIndex,"dav");
 					PTHREAD_MUTEX_SAFE_UNLOCK(sPicFileOpMutex,OldStatus);
-					//sprintf(FilePathName,"%s%s",FSU_IPC_ALARM_CAP_BASE_DIR,BasePathName);
 					sprintf(FilePathName,"%s%s",sIpcServer.m_strRecPath,BasePathName);
-					JSYA_LES_LogPrintf("FSU_IPC",LOG_EVENT_LEVEL_INFO,"record file(%s)...\r\n",FilePathName);
-					
+					ZFY_LES_LogPrintf("FSU_IPC",LOG_EVENT_LEVEL_INFO,"record file(%s)...\r\n",FilePathName);
 					pFile=fopen(FilePathName,"wb");
 					if(NULL!=pFile)
 					{
 						if(fwrite(nextLineStart,1,write_len,pFile)!=write_len)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"record failed 3...\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"record failed 3...\r\n");
 							fclose(pFile);
 							pFile=NULL;
 							goto err;
@@ -777,11 +696,13 @@ Authorization: Basic %s\r\n\
 						{
 							if(Total_len>=contentLength)
 							{
-								JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"record success 2...\r\n");
+								ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"record success 2...\r\n");
 								fflush(pFile);
 								fsync(fileno(pFile));
 								fclose(pFile);
 								pFile=NULL;
+								if(NULL!=pFileName)
+									strcpy(pFileName,FilePathName);
 								break;
 							}
 							else
@@ -792,16 +713,18 @@ Authorization: Basic %s\r\n\
 									bytesRead=getResponse(sockfd,buffer,readBufSize);
 									if(bytesRead <= 0) 
 									{
-										JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"record success 3...\r\n");
+										ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"record success 3...\r\n");
+										if(NULL!=pFileName)
+											strcpy(pFileName,FilePathName);
 										break;
 									}
 									else
 									{
-										JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv2:%s\r\n",buffer);
+										ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv2:%s\r\n",buffer);
 										Total_len+=bytesRead;
 										if(fwrite(buffer,1,bytesRead,pFile)!=bytesRead)
 										{
-											JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"record2 failed 3...\r\n");
+											ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"record2 failed 3...\r\n");
 											fclose(pFile);
 											pFile=NULL;
 											goto err;
@@ -809,6 +732,8 @@ Authorization: Basic %s\r\n\
 										
 									}
 								}
+								if(NULL!=pFileName)
+									strcpy(pFileName,FilePathName);
 								fflush(pFile);
 								fsync(fileno(pFile));
 								fclose(pFile);
@@ -819,7 +744,7 @@ Authorization: Basic %s\r\n\
 					}
 					else
 					{
-						JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"record failed 4...\r\n");
+						ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"record failed 4...\r\n");
 						goto err;
 					}
 				}
@@ -965,7 +890,7 @@ SnapRetry:
 	server_addr.sin_family=AF_INET;
     server_addr.sin_addr.s_addr=inet_addr(host_addr);
     server_addr.sin_port=htons(portnumber);
- 	JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
+ 	ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
 	sockfd=CreateSocket(SOCKET_TYPE_TCP,SOCKET_TCP_MODE_CLIENT,&LocalAddr,&server_addr,INVALID_DEV_NET_ID);
 	if(sockfd==SOCKET_INVALID_FD)
 		return FALSE;
@@ -1155,7 +1080,7 @@ Authorization: Basic %s\r\n\
 		send=write(sockfd,request+totalsend,nbytes-totalsend); 
         if(send == -1)     
         {
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
 			BASE64_BUF_FREE(pBase64Buf);
 			KillSocket(&sockfd);
 			return FALSE;
@@ -1172,13 +1097,13 @@ Authorization: Basic %s\r\n\
 	}
 	else
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
 	}
 	firstLine=buffer;
 	nextLineStart=getLine(firstLine);
 	if(sscanf(firstLine,"%*s%u",&responseCode) != 1) 
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
 		BASE64_BUF_FREE(pBase64Buf);
 		KillSocket(&sockfd);
 		return FALSE;
@@ -1213,15 +1138,15 @@ ReadNext:
 						}
 						if(HaveLogoutSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Logout ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Logout ok\r\n");
 						}
 						else if(HaveUnlockSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Unlock ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Unlock ok\r\n");
 						}
 						else if(HaveSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Setsnap ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Setsnap ok\r\n");
 							char					BasePathName[1024];
 							char					FilePathName[1024];
 							time_t 					rawtime;
@@ -1233,7 +1158,7 @@ ReadNext:
 							if(contentLength>(unsigned int)(bytesRead-(nextLineStart-buffer)))
 							{
 								contentLength=bytesRead-(nextLineStart-buffer);
-								JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to truncation...\r\n");
+								ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to truncation...\r\n");
 							}
 							
 						}
@@ -1293,7 +1218,7 @@ ReadNext:
 						if(contentLength>(unsigned int)(bytesRead-(nextLineStart-buffer)))
 						{
 							contentLength=bytesRead-(nextLineStart-buffer);
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try truncation2...\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try truncation2...\r\n");
 						}
 						
 					}
@@ -1459,7 +1384,7 @@ SnapRetry:
 	server_addr.sin_family=AF_INET;
     server_addr.sin_addr.s_addr=inet_addr(host_addr);
     server_addr.sin_port=htons(portnumber);
- 	JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
+ 	ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
 	sockfd=CreateSocket(SOCKET_TYPE_TCP,SOCKET_TCP_MODE_CLIENT,&LocalAddr,&server_addr,INVALID_DEV_NET_ID);
 	if(sockfd==SOCKET_INVALID_FD)
 		return FALSE;
@@ -1650,7 +1575,7 @@ Authorization: Basic %s\r\n\
 		send=write(sockfd,request+totalsend,nbytes-totalsend); 
         if(send == -1)     
         {
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
 			BASE64_BUF_FREE(pBase64Buf);
 			KillSocket(&sockfd);
 			return FALSE;
@@ -1667,13 +1592,13 @@ Authorization: Basic %s\r\n\
 	}
 	else
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
 	}
 	firstLine=buffer;
 	nextLineStart=getLine(firstLine);
 	if(sscanf(firstLine,"%*s%u",&responseCode) != 1) 
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
 		BASE64_BUF_FREE(pBase64Buf);
 		KillSocket(&sockfd);
 		return FALSE;
@@ -1708,11 +1633,11 @@ ReadNext:
 						}
 						if(HaveLogoutSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Logout ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Logout ok\r\n");
 						}
 						else if(HaveSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Setsnap ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Setsnap ok\r\n");
 							char					BasePathName[1024];
 							char					FilePathName[1024];
 							time_t 					rawtime;
@@ -1724,7 +1649,7 @@ ReadNext:
 							if(contentLength>(unsigned int)(bytesRead-(nextLineStart-buffer)))
 							{
 								contentLength=bytesRead-(nextLineStart-buffer);
-								JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to truncation...\r\n");
+								ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to truncation...\r\n");
 							}
 							
 						}
@@ -1784,7 +1709,7 @@ ReadNext:
 						if(contentLength>(unsigned int)(bytesRead-(nextLineStart-buffer)))
 						{
 							contentLength=bytesRead-(nextLineStart-buffer);
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try truncation2...\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try truncation2...\r\n");
 						}
 						
 					}
@@ -1950,7 +1875,7 @@ SnapRetry:
 	server_addr.sin_family=AF_INET;
     server_addr.sin_addr.s_addr=inet_addr(host_addr);
     server_addr.sin_port=htons(portnumber);
- 	JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
+ 	ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
 	sockfd=CreateSocket(SOCKET_TYPE_TCP,SOCKET_TCP_MODE_CLIENT,&LocalAddr,&server_addr,INVALID_DEV_NET_ID);
 	if(sockfd==SOCKET_INVALID_FD)
 		return FALSE;
@@ -2141,7 +2066,7 @@ Authorization: Basic %s\r\n\
 		send=write(sockfd,request+totalsend,nbytes-totalsend); 
         if(send == -1)     
         {
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
 			BASE64_BUF_FREE(pBase64Buf);
 			KillSocket(&sockfd);
 			return FALSE;
@@ -2158,13 +2083,13 @@ Authorization: Basic %s\r\n\
 	}
 	else
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
 	}
 	firstLine=buffer;
 	nextLineStart=getLine(firstLine);
 	if(sscanf(firstLine,"%*s%u",&responseCode) != 1) 
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
 		BASE64_BUF_FREE(pBase64Buf);
 		KillSocket(&sockfd);
 		return FALSE;
@@ -2199,15 +2124,15 @@ ReadNext:
 						}
 						if(HaveLogoutSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Logout ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Logout ok\r\n");
 						}
 						else if(HaveUnlockSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Unlock ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Unlock ok\r\n");
 						}
 						else if(HaveSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Setsnap ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Setsnap ok\r\n");
 							char					BasePathName[1024];
 							char					FilePathName[1024];
 							time_t 					rawtime;
@@ -2219,7 +2144,7 @@ ReadNext:
 							if(contentLength>(unsigned int)(bytesRead-(nextLineStart-buffer)))
 							{
 								contentLength=bytesRead-(nextLineStart-buffer);
-								JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to truncation...\r\n");
+								ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to truncation...\r\n");
 							}
 							
 						}
@@ -2284,7 +2209,7 @@ ReadNext:
 						if(contentLength>(unsigned int)(bytesRead-(nextLineStart-buffer)))
 						{
 							contentLength=bytesRead-(nextLineStart-buffer);
-							JSYA_LES_LogPrintf("FSU_IPC",LOG_EVENT_LEVEL_NOTICE,"try truncation2...\r\n");
+							ZFY_LES_LogPrintf("FSU_IPC",LOG_EVENT_LEVEL_NOTICE,"try truncation2...\r\n");
 						}
 						PTHREAD_MUTEX_SAFE_LOCK(sPicFileOpMutex,OldStatus);
 						time(&rawtime);
@@ -2463,7 +2388,7 @@ SnapRetry:
 	server_addr.sin_family=AF_INET;
     server_addr.sin_addr.s_addr=inet_addr(host_addr);
     server_addr.sin_port=htons(portnumber);
- 	JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
+ 	ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to connect IPC(%s).....\r\n",host_addr);
 	sockfd=CreateSocket(SOCKET_TYPE_TCP,SOCKET_TCP_MODE_CLIENT,&LocalAddr,&server_addr,INVALID_DEV_NET_ID);
 	if(sockfd==SOCKET_INVALID_FD)
 		return FALSE;
@@ -2658,7 +2583,7 @@ Authorization: Basic %s\r\n\
 		send=write(sockfd,request+totalsend,nbytes-totalsend); 
         if(send == -1)     
         {
-			JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
+			ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"httpclient send error(%s)\r\n",strerror(errno));
 			BASE64_BUF_FREE(pBase64Buf);
 			KillSocket(&sockfd);
 			return FALSE;
@@ -2675,13 +2600,13 @@ Authorization: Basic %s\r\n\
 	}
 	else
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_DEBUG,"recv:%s\r\n",buffer);
 	}
 	firstLine=buffer;
 	nextLineStart=getLine(firstLine);
 	if(sscanf(firstLine,"%*s%u",&responseCode) != 1) 
 	{
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"no response code in firstLine\r\n");
 		BASE64_BUF_FREE(pBase64Buf);
 		KillSocket(&sockfd);
 		return FALSE;
@@ -2716,17 +2641,17 @@ ReadNext:
 						}
 						if(HaveLogoutSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Logout ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Logout ok\r\n");
 						}
 						else if(HaveUnlockSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Unlock ok\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Unlock ok\r\n");
 						}
 						else if(HaveSession)
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Setsnap ok\r\n");
-							char					BasePathName[1024];
-							char					FilePathName[1024];
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC Setsnap ok\r\n");
+							char					BasePathName[64];
+							char					FilePathName[64];
 							time_t 					rawtime;
 							int						OldStatus;
 							struct 					tm *timeinfo;
@@ -2736,7 +2661,7 @@ ReadNext:
 							if(contentLength>(unsigned int)(bytesRead-(nextLineStart-buffer)))
 							{
 								contentLength=bytesRead-(nextLineStart-buffer);
-								JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to truncation...\r\n");
+								ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try to truncation...\r\n");
 							}
 							PTHREAD_MUTEX_SAFE_LOCK(sPicFileOpMutex,OldStatus);
 							time(&rawtime);
@@ -2752,21 +2677,21 @@ ReadNext:
 								1+timeinfo->tm_mon,timeinfo->tm_mday,timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec,CurrPicIndex,"jpg");
 							PTHREAD_MUTEX_SAFE_UNLOCK(sPicFileOpMutex,OldStatus);
 							sprintf(FilePathName,"%s%s",FSU_IPC_ALARM_CAP_BASE_DIR,BasePathName);
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"cap file (%s)...\r\n",FilePathName);
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"cap file (%s)...\r\n",FilePathName);
 							
 							pFile=fopen(FilePathName,"wb");
 							if(NULL!=pFile)
 							{
 								if(fwrite(nextLineStart,1,contentLength,pFile)!=contentLength)
 								{
-									JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"cap failed...\r\n");
+									ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"cap failed...\r\n");
 									fclose(pFile);
 									pFile=NULL;
 									goto err;
 								}
 								else
 								{
-									JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"cap success...\r\n");
+									ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"cap success...\r\n");
 									fflush(pFile);
 									fsync(fileno(pFile));
 									fclose(pFile);
@@ -2778,7 +2703,7 @@ ReadNext:
 							}
 							else
 							{
-								JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"cap failed2...\r\n");
+								ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"cap failed2...\r\n");
 								goto err;
 							}
 						}
@@ -2837,7 +2762,7 @@ ReadNext:
 						if(contentLength>(unsigned int)(bytesRead-(nextLineStart-buffer)))
 						{
 							contentLength=bytesRead-(nextLineStart-buffer);
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try truncation2...\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"try truncation2...\r\n");
 						}
 						PTHREAD_MUTEX_SAFE_LOCK(sPicFileOpMutex,OldStatus);
 						time(&rawtime);
@@ -2852,23 +2777,22 @@ ReadNext:
 						sprintf(BasePathName,"%s_%.4d%.2d%.2d_%.2d%.2d%.2d_%.2d.%s",FsuID,1900+timeinfo->tm_year,
 							1+timeinfo->tm_mon,timeinfo->tm_mday,timeinfo->tm_hour,timeinfo->tm_min,timeinfo->tm_sec,CurrPicIndex,"jpg");
 						PTHREAD_MUTEX_SAFE_UNLOCK(sPicFileOpMutex,OldStatus);
-						//sprintf(FilePathName,"%s%s",FSU_IPC_ALARM_CAP_BASE_DIR,BasePathName);
 						sprintf(FilePathName,"%s%s",sIpcServer.m_strCapPath,BasePathName);
-						JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"cap file(%s)...\r\n",FilePathName);
+						ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"cap file(%s)...\r\n",FilePathName);
 						
 						pFile=fopen(FilePathName,"wb");
 						if(NULL!=pFile)
 						{
 							if(fwrite(nextLineStart,1,contentLength,pFile)!=contentLength)
 							{
-								JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"cap failed 3...\r\n");
+								ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"cap failed 3...\r\n");
 								fclose(pFile);
 								pFile=NULL;
 								goto err;
 							}
 							else
 							{
-								JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"cap success 2...\r\n");
+								ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"cap success 2...\r\n");
 								fflush(pFile);
 								fsync(fileno(pFile));
 								fclose(pFile);
@@ -2880,7 +2804,7 @@ ReadNext:
 						}
 						else
 						{
-							JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"cap failed 4...\r\n");
+							ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_NOTICE,"cap failed 4...\r\n");
 							goto err;
 						}
 					}
@@ -2982,11 +2906,11 @@ static BOOL IpcSetSnapPic(char *ID,DWORD IpcIndex,BOOL IsSubStream,char *pSnapFi
  *特殊说明: 无
  ************************************************************************************************************************************************************************       
 */
-extern BOOL ZFY_IpcSnapShot(char *ID,DWORD IpcIndex)
+extern BOOL ZFY_IpcSnapShot(char *ID,DWORD IpcIndex,char *pFileName)
 {
 	if(!sFsuIpcIsInitReady)
 		return FALSE;
-	return IpcSetSnapPic(ID,IpcIndex,FALSE,NULL);
+	return IpcSetSnapPic(ID,IpcIndex,FALSE,pFileName);
 }
 
 /*
@@ -3039,7 +2963,7 @@ extern BOOL ZFY_IpcInit(PIPC_API_CONF pConf)
 		if(pConf->strRecPath!=NULL)
 			strncpy(sIpcServer.m_strRecPath,pConf->strRecPath,sizeof(sIpcServer.m_strRecPath)-1);
 		sFsuIpcIsInitReady=TRUE;
-		JSYA_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC process unit is ready...\r\n");
+		ZFY_LES_LogPrintf("ZFY_IPC",LOG_EVENT_LEVEL_INFO,"IPC process unit is ready...\r\n");
 	}
 	PTHREAD_MUTEX_SAFE_UNLOCK(sPicFileOpMutex,OldStatus);
 	return TRUE;

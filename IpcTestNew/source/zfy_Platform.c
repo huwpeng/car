@@ -3,7 +3,7 @@
  ********************************************************************************************************************************
  *			PROGRAM MODULE
  *
- *			$Workfile:		zfy_Rola.c			$
+ *			$Workfile:		zfy_Platform.c		$
  *			$Revision:		1.0					$
  *			$Author:		LJJ					$
  *			$Date:			2024/12/26			$
@@ -44,6 +44,12 @@
 #include "LogEventServer.h"
 #include "aes.h"
 
+
+/*
+ ************************************************************************************************************************************************************************
+ * 常数定义
+ ************************************************************************************************************************************************************************
+*/
 #define CLOAD_SERVER_USER_NAME						"admin"
 #define CLOAD_SERVER_USER_PWD						"admin"
 #define CLOAD_SERVER_PORT_STD						1234
@@ -55,7 +61,11 @@
 #define CLOAD_TCP_RECV_QUEUE_SIZE					32
 
 
-
+/*
+ ************************************************************************************************************************************************************************
+ 类型定义
+ ************************************************************************************************************************************************************************
+*/
 typedef struct _CLOAD_TCP_QUEUE_NODE
 {
 	DWORD						m_Len;
@@ -106,11 +116,22 @@ typedef struct _CLOAD_TCP_SERVER
 }CLOAD_TCP_SERVER,*PCLOAD_TCP_SERVER;
 
 
+/*
+ ************************************************************************************************************************************************************************
+ * 全局变量
+ ************************************************************************************************************************************************************************
+*/
 static CLOAD_TCP_SERVER			sCloadTcpServer;
 static pthread_mutex_t			sCloadTcpServerMutex=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t			sCloadTcpQueueMutex=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t			sCloadTcpWorkMutex=PTHREAD_MUTEX_INITIALIZER;
 
+
+/*
+ ****************************************************************************************************************************************************
+ * 函数定义
+ *****************************************************************************************************************************************************
+*/
 extern DWORD ConfigServerGetSysRunTime(BOOL IsInMs)
 {
 	static pthread_mutex_t	sSysRunTimeMutex=PTHREAD_MUTEX_INITIALIZER;
@@ -387,12 +408,12 @@ static BOOL CloadParseRecvData(const BYTE *pBuf,const DWORD Len)
 					case 0x7C:
 						break;
 					default:
-						JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"***protocol(Cmd=0x%X)...\r\n",RecvBuf[pos+3]);
+						ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"***protocol(Cmd=0x%X)...\r\n",RecvBuf[pos+3]);
 						break;
 					}
 				}
 				//else
-				//	JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"***unspported protocol(Addr=0x%X)...\r\n",RecvBuf[i+1]);
+				//	ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"***unspported protocol(Addr=0x%X)...\r\n",RecvBuf[i+1]);
 				PTHREAD_MUTEX_SAFE_UNLOCK(sCloadTcpWorkMutex,OldStatus);
 				
 				pos += TempLen;
@@ -431,7 +452,7 @@ static void *CloadTcpProcThread(void *pArg)
 	DWORD 						datalen = 0;
 	BYTE key[16] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F};	
 	
-	JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_INFO,"******CLOAD-TCP thread(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
+	ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_INFO,"******CLOAD-TCP thread(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
 	sleep(1);
 	
 	for(;;)
@@ -455,7 +476,7 @@ static void *CloadTcpProcThread(void *pArg)
 					PTHREAD_MUTEX_SAFE_LOCK(sCloadTcpWorkMutex,OldStatus);
 					sCloadTcpServer.m_IsCloadLogin=FALSE;
 					PTHREAD_MUTEX_SAFE_UNLOCK(sCloadTcpWorkMutex,OldStatus);
-					JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_CRIT,"heartbeat timeout...\r\n");
+					ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_CRIT,"heartbeat timeout...\r\n");
 					sCloadTcpServer.m_CloadLastHeartAckTime=CurrHCheckTime;
 				}
 			}
@@ -469,7 +490,7 @@ static void *CloadTcpProcThread(void *pArg)
 				}
 				if(RecvNode.m_Len!=0)
 				{
-					JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_INFO,"CLOAD-TCP recv=%d-%x-%x-%x-%x----%s---\r\n",RecvNode.m_Len,RecvNode.m_Buf[0],RecvNode.m_Buf[1],RecvNode.m_Buf[2],RecvNode.m_Buf[3],&RecvNode.m_Buf[3]);
+					ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_INFO,"CLOAD-TCP recv=%d-%x-%x-%x-%x----%s---\r\n",RecvNode.m_Len,RecvNode.m_Buf[0],RecvNode.m_Buf[1],RecvNode.m_Buf[2],RecvNode.m_Buf[3],&RecvNode.m_Buf[3]);
 					CloadParseRecvData(RecvNode.m_Buf,RecvNode.m_Len);
 					RecvNode.m_Len=0;
 				}
@@ -548,7 +569,7 @@ static void *CloadTcpProcThread(void *pArg)
 			}
 			if(RecvNode.m_Len!=0)
 			{
-				JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_INFO,"CLOAD-TCP recv=%d-%x-%x-%x-%x----%s---\r\n",RecvNode.m_Len,RecvNode.m_Buf[0],RecvNode.m_Buf[1],RecvNode.m_Buf[2],RecvNode.m_Buf[3],&RecvNode.m_Buf[3]);
+				ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_INFO,"CLOAD-TCP recv=%d-%x-%x-%x-%x----%s---\r\n",RecvNode.m_Len,RecvNode.m_Buf[0],RecvNode.m_Buf[1],RecvNode.m_Buf[2],RecvNode.m_Buf[3],&RecvNode.m_Buf[3]);
 				CloadParseRecvData(RecvNode.m_Buf,RecvNode.m_Len);
 				RecvNode.m_Len=0;
 			}
@@ -568,7 +589,7 @@ static void *CloadTcpNetThread(void *pArg)
 	fd_set						ReadSet,WriteSet;
 	CLOAD_TCP_QUEUE_NODE		SendNode;
 
-	JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_INFO,"******CLOAD-TCP net thread(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
+	ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_INFO,"******CLOAD-TCP net thread(PID=%d,PTID=%u)...\r\n",getpid(),pthread_self());
 	sleep(10);
 	memset(&RemoteAddr,0,sizeof(RemoteAddr));
 	RemoteAddr.sin_family=AF_INET;
@@ -591,11 +612,11 @@ static void *CloadTcpNetThread(void *pArg)
 			pServer->m_LocalFd=CreateSocket(SOCKET_TYPE_TCP,SOCKET_TCP_MODE_CLIENT,NULL,&RemoteAddr,INVALID_DEV_NET_ID);
 		if(pServer->m_LocalFd==SOCKET_INVALID_FD)
 		{
-			JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_ERR,"CLOAD-TCP create socket failed...\r\n");
+			ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_ERR,"CLOAD-TCP create socket failed...\r\n");
 			sleep(15);
 			continue;
 		}
-		JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP socket connected...\r\n");
+		ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP socket connected...\r\n");
 		pServer->m_IsCloadConnected=TRUE;
 		
 		for(;;)
@@ -636,9 +657,9 @@ static void *CloadTcpNetThread(void *pArg)
 					}
 					if(SendNode.m_Len!=0)
 					{
-						if(!JSYA_NET_SendStream(pServer->m_LocalFd,SendNode.m_Buf,SendNode.m_Len))
+						if(!ZFY_NET_SendStream(pServer->m_LocalFd,SendNode.m_Buf,SendNode.m_Len))
 						{
-							JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP send failed...\r\n");
+							ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP send failed...\r\n");
 							KillSocket(&pServer->m_LocalFd);
 							pServer->m_LocalFd=SOCKET_INVALID_FD;
 							pServer->m_IsCloadConnected=FALSE;
@@ -658,7 +679,7 @@ static void *CloadTcpNetThread(void *pArg)
 					RecvNode.m_Len=sizeof(RecvNode.m_Buf);
 					if(ioctl(pServer->m_LocalFd,FIONREAD,(char *)&InLen)!=STD_SUCCESS)
 					{
-						JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_ERR,"CLOAD-TCP ioctl(%s) failed...\r\n",strerror(errno));
+						ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_ERR,"CLOAD-TCP ioctl(%s) failed...\r\n",strerror(errno));
 						KillSocket(&pServer->m_LocalFd);
 						pServer->m_LocalFd=SOCKET_INVALID_FD;
 						pServer->m_IsCloadConnected=FALSE;
@@ -666,7 +687,7 @@ static void *CloadTcpNetThread(void *pArg)
 					}
 					if(InLen==0)
 					{
-						JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP len==0...\r\n");
+						ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP len==0...\r\n");
 						KillSocket(&pServer->m_LocalFd);
 						pServer->m_LocalFd=SOCKET_INVALID_FD;
 						pServer->m_IsCloadConnected=FALSE;
@@ -674,15 +695,15 @@ static void *CloadTcpNetThread(void *pArg)
 					}
 					if((DWORD)InLen<RecvLen)
 						RecvLen=InLen;
-					if(!JSYA_NET_RecvStream(pServer->m_LocalFd,RecvBuf,RecvLen))
+					if(!ZFY_NET_RecvStream(pServer->m_LocalFd,RecvBuf,RecvLen))
 					{
-						JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP recv failed...\r\n");
+						ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP recv failed...\r\n");
 						KillSocket(&pServer->m_LocalFd);
 						pServer->m_LocalFd=SOCKET_INVALID_FD;
 						pServer->m_IsCloadConnected=FALSE;
 						break;
 					}
-					JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_CRIT,"***CLOAD-TCP recv len=%d...\r\n",RecvLen);
+					ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_CRIT,"***CLOAD-TCP recv len=%d...\r\n",RecvLen);
 					while(RecvLen)
 					{
 						if(RecvLen>steplen)
@@ -712,6 +733,18 @@ static void *CloadTcpNetThread(void *pArg)
 	return NULL;
 }
 
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_CloadServerStatus
+ *功能描述: 平台协议模块状态查询
+ *输入描述: 无
+ *输出描述: 无
+ *返回描述: 无
+ *作者日期: LJJ/2024/12/02
+ *全局声明: sCloadTcpServer
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
 extern BOOL ZFY_CloadServerStatus(BOOL *pIsAlive, BOOL *pIsLogin)
 {
 	if(pIsAlive!=NULL)
@@ -723,6 +756,18 @@ extern BOOL ZFY_CloadServerStatus(BOOL *pIsAlive, BOOL *pIsLogin)
 	return FALSE;
 }
 
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_CloadServerOpen
+ *功能描述: 平台协议模块打开
+ *输入描述: 配置参数
+ *输出描述: 无
+ *返回描述: 无
+ *作者日期: LJJ/2024/12/02
+ *全局声明: sCloadTcpServerMutex,sCloadTcpServer
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
 extern BOOL ZFY_CloadServerOpen(PCLOAD_CONF_CONF pConf)
 {
 	int					i,ret,OldStatus;
@@ -732,7 +777,7 @@ extern BOOL ZFY_CloadServerOpen(PCLOAD_CONF_CONF pConf)
 	PTHREAD_MUTEX_SAFE_LOCK(sCloadTcpServerMutex,OldStatus);
 	if(sCloadTcpServer.m_IsReady)
 	{
-		JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP is ready...\r\n");
+		ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP is ready...\r\n");
 		PTHREAD_MUTEX_SAFE_UNLOCK(sCloadTcpServerMutex,OldStatus);
 		return TRUE;
 	}
@@ -744,7 +789,7 @@ extern BOOL ZFY_CloadServerOpen(PCLOAD_CONF_CONF pConf)
 	
 	if(NULL==pConf || NULL==pConf->strCloadServerIP)
 	{
-		JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP param is err...\r\n");
+		ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_NOTICE,"CLOAD-TCP param is err...\r\n");
 		PTHREAD_MUTEX_SAFE_UNLOCK(sCloadTcpServerMutex,OldStatus);
 		return FALSE;
 	}
@@ -762,13 +807,13 @@ extern BOOL ZFY_CloadServerOpen(PCLOAD_CONF_CONF pConf)
 	
 	if((ret=pthread_create(&sCloadTcpServer.m_LocalThreadID,NULL,CloadTcpNetThread,&sCloadTcpServer))!=STD_SUCCESS)
 	{
-		JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_ERR,"CLOAD-TCP net thread failed(%d)...\r\n",ret);
+		ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_ERR,"CLOAD-TCP net thread failed(%d)...\r\n",ret);
 		PTHREAD_MUTEX_SAFE_UNLOCK(sCloadTcpServerMutex,OldStatus);
 		return FALSE;
 	}
 	if((ret=pthread_create(&sCloadTcpServer.m_ProcThreadID,NULL,CloadTcpProcThread,&sCloadTcpServer))!=STD_SUCCESS)
 	{
-		JSYA_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_ERR,"CLOAD-TCP tcp thread failed(%d)...\r\n",ret);
+		ZFY_LES_LogPrintf("CLOAD-TCP",LOG_EVENT_LEVEL_ERR,"CLOAD-TCP tcp thread failed(%d)...\r\n",ret);
 		PTHREAD_MUTEX_SAFE_UNLOCK(sCloadTcpServerMutex,OldStatus);
 		return FALSE;
 	}
@@ -777,6 +822,18 @@ extern BOOL ZFY_CloadServerOpen(PCLOAD_CONF_CONF pConf)
 	return TRUE;
 }
 
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_CloadServerClose
+ *功能描述: 平台协议模块关闭
+ *输入描述: 无
+ *输出描述: 无
+ *返回描述: 无
+ *作者日期: LJJ/2024/12/02
+ *全局声明: sCloadTcpServerMutex,sCloadTcpServer
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
 extern void ZFY_CloadServerClose(void)
 {
 	int		i,OldStatus;

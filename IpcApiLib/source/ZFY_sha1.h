@@ -20,8 +20,8 @@
  *
  *  This file is part of mbed TLS (https://tls.mbed.org)
  */
-#ifndef JSYA_SHA1_H
-#define JSYA_SHA1_H
+#ifndef ZFY_SHA1_H
+#define ZFY_SHA1_H
 
 
 
@@ -43,21 +43,21 @@ typedef struct
     uint32_t state[5];          /*!< intermediate digest state  */
     unsigned char buffer[64];   /*!< data block being processed */
 }
-jsya_sha1_context;
+zfy_sha1_context;
 
 /**
  * \brief          Initialize SHA-1 context
  *
  * \param ctx      SHA-1 context to be initialized
  */
-void jsya_sha1_init( jsya_sha1_context *ctx );
+void zfy_sha1_init( zfy_sha1_context *ctx );
 
 /**
  * \brief          Clear SHA-1 context
  *
  * \param ctx      SHA-1 context to be cleared
  */
-void jsya_sha1_free( jsya_sha1_context *ctx );
+void zfy_sha1_free( zfy_sha1_context *ctx );
 
 /**
  * \brief          Clone (the state of) a SHA-1 context
@@ -65,14 +65,14 @@ void jsya_sha1_free( jsya_sha1_context *ctx );
  * \param dst      The destination context
  * \param src      The context to be cloned
  */
-void jsya_sha1_clone( jsya_sha1_context *dst, const jsya_sha1_context *src );
+void zfy_sha1_clone( zfy_sha1_context *dst, const zfy_sha1_context *src );
 
 /**
  * \brief          SHA-1 context setup
  *
  * \param ctx      context to be initialized
  */
-void jsya_sha1_starts( jsya_sha1_context *ctx );
+void zfy_sha1_starts( zfy_sha1_context *ctx );
 
 /**
  * \brief          SHA-1 process buffer
@@ -81,7 +81,7 @@ void jsya_sha1_starts( jsya_sha1_context *ctx );
  * \param input    buffer holding the  data
  * \param ilen     length of the input data
  */
-void jsya_sha1_update( jsya_sha1_context *ctx, const unsigned char *input, size_t ilen );
+void zfy_sha1_update( zfy_sha1_context *ctx, const unsigned char *input, size_t ilen );
 
 /**
  * \brief          SHA-1 final digest
@@ -89,10 +89,10 @@ void jsya_sha1_update( jsya_sha1_context *ctx, const unsigned char *input, size_
  * \param ctx      SHA-1 context
  * \param output   SHA-1 checksum result
  */
-void jsya_sha1_finish( jsya_sha1_context *ctx, unsigned char output[20] );
+void zfy_sha1_finish( zfy_sha1_context *ctx, unsigned char output[20] );
 
 /* Internal use */
-void jsya_sha1_process( jsya_sha1_context *ctx, const unsigned char data[64] );
+void zfy_sha1_process( zfy_sha1_context *ctx, const unsigned char data[64] );
 
 #ifdef __cplusplus
 }
@@ -110,14 +110,14 @@ extern "C" {
  * \param ilen     length of the input data
  * \param output   SHA-1 checksum result
  */
-void jsya_sha1( const unsigned char *input, size_t ilen, unsigned char output[20] );
+void zfy_sha1( const unsigned char *input, size_t ilen, unsigned char output[20] );
 
 /**
  * \brief          Checkup routine
  *
  * \return         0 if successful, or 1 if the test failed
  */
-int jsya_sha1_self_test( int verbose );
+int zfy_sha1_self_test( int verbose );
 
 #ifdef __cplusplus
 }
