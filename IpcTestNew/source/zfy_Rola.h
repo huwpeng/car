@@ -17,7 +17,7 @@ extern "C" {
  *功能描述: ROLA模块打开
  *输入描述: 无
  *输出描述: 无
- *返回描述: 无
+ *返回描述: TRUE/FALSE
  *作者日期: LJJ/2024/12/02
  *全局声明: sSerDevMutex,sSerDevServer
  *特殊说明: 无
@@ -45,7 +45,7 @@ extern void ZFY_RolaDevClose(void);
  *功能描述: ROLA模块发送数据
  *输入描述: 数据缓冲区,数据长度,溢出标志,超时
  *输出描述: 无
- *返回描述: 无
+ *返回描述: TRUE/FALSE
  *作者日期: LJJ/2024/12/02
  *全局声明: sSerDevMutex,sSerDevServer
  *特殊说明: 无
@@ -59,7 +59,7 @@ extern BOOL ZFY_RolaWriteData(const void *pBuf,DWORD dwSize,BOOL IsAutoOver,cons
  *功能描述: ROLA模块接收数据
  *输入描述: 数据缓冲区,数据长度,超时
  *输出描述: 无
- *返回描述: 无
+ *返回描述: TRUE/FALSE
  *作者日期: LJJ/2024/12/02
  *全局声明: sSerDevMutex,sSerDevServer
  *特殊说明: 无
@@ -67,7 +67,19 @@ extern BOOL ZFY_RolaWriteData(const void *pBuf,DWORD dwSize,BOOL IsAutoOver,cons
 */
 extern BOOL ZFY_RolaReadData(void *pBuf,DWORD *pBufSize,const DWORD *pTimeOutMS);
 
-
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_RolaPowerCtrl
+ *功能描述: ROLA模块电源控制
+ *输入描述: 是否上电
+ *输出描述: 无
+ *返回描述: TRUE/FALSE
+ *作者日期: LJJ/2024/12/02
+ *全局声明: 无
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
+extern BOOL ZFY_RolaPowerCtrl(BOOL PowerEnable);
 
 
 

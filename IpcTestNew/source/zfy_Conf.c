@@ -120,7 +120,7 @@ static WORD Comm_MakeCrc(const void *pBuf, WORD Len)
 		}
 	}
 	
-	return	wCrc;
+	return wCrc;
 }
 
 static BYTE MakeSum(const void *pBuf,DWORD Len)
@@ -161,6 +161,20 @@ static void ZFY_ConfDataBaseDefault(PSYS_CONFIG_DATABASE pDataBase)
 	pDataBase->IpcConfig.IpcPort=DEFAULT_SYS_IPC_PORT;
 	strcpy(pDataBase->IpcConfig.IpcUser,DEFAULT_SYS_IPC_USER);
 	strcpy(pDataBase->IpcConfig.IpcPwd,DEFAULT_SYS_IPC_PASSWD);
+	
+	pDataBase->CloadConfig.ServerIp=ntohl(inet_addr(DEFAULT_SYS_PLATFORM_IP));
+	pDataBase->CloadConfig.ServerPort=DEFAULT_SYS_PLATFORM_PORT;
+	strcpy(pDataBase->CloadConfig.LoginUser,DEFAULT_SYS_PLATFORM_USER);
+	strcpy(pDataBase->CloadConfig.LoginPwd,DEFAULT_SYS_PLATFORM_PASSWD);
+	
+	pDataBase->FtpConfig.ServerIp=ntohl(inet_addr(DEFAULT_SYS_FTP_IP));
+	pDataBase->FtpConfig.ServerPort=DEFAULT_SYS_FTP_PORT;
+	strcpy(pDataBase->FtpConfig.FtpUser,DEFAULT_SYS_FTP_USER);
+	strcpy(pDataBase->FtpConfig.FtpPwd,DEFAULT_SYS_FTP_PASSWD);
+	
+	strcpy(pDataBase->ApnConfig.ApnName,DEFAULT_SYS_APN_NAME);
+	strcpy(pDataBase->ApnConfig.ApnUser,DEFAULT_SYS_APN_USER);
+	strcpy(pDataBase->ApnConfig.ApnPwd,DEFAULT_SYS_APN_PASSWD);
 }
 
 /*

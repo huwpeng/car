@@ -10,14 +10,27 @@ extern "C" {
 
 #include "Common.h"
 
-
+#define DEFAULT_IPC_PIC_MAX_NUM							(5)
+#define DEFAULT_IPC_REC_MAX_NUM							(3)
 
 #define DEFAULT_SYS_IPC_IP								"192.168.8.108"
+#define DEFAULT_SYS_IPC_PORT							80
 #define DEFAULT_SYS_IPC_USER							"admin"
 #define DEFAULT_SYS_IPC_PASSWD							"123456abc"
-#define DEFAULT_SYS_IPC_PORT							80
 
+#define DEFAULT_SYS_PLATFORM_IP							"192.168.8.11"
+#define DEFAULT_SYS_PLATFORM_PORT						1234
+#define DEFAULT_SYS_PLATFORM_USER						"admin"
+#define DEFAULT_SYS_PLATFORM_PASSWD						"admin"
 
+#define DEFAULT_SYS_FTP_IP								"192.168.8.11"
+#define DEFAULT_SYS_FTP_PORT							21
+#define DEFAULT_SYS_FTP_USER							"ftp"
+#define DEFAULT_SYS_FTP_PASSWD							"ftp"
+
+#define DEFAULT_SYS_APN_NAME							"apn"
+#define DEFAULT_SYS_APN_USER							"888888"
+#define DEFAULT_SYS_APN_PASSWD							"888888"
 
 #define DEFAULT_SYS_CURR_CONFIG_DATABASE_FILE			"/opt/ConfigDataBase"
 
@@ -29,8 +42,10 @@ typedef struct _IPC_CONFIG
 	DWORD		IpcPort;
 	char		IpcUser[32];
 	char		IpcPwd[32];
-	char		CapPath[5][64];
-	char		RecordPath[3][64];
+	time_t		RecordStart[DEFAULT_IPC_REC_MAX_NUM];
+	time_t		RecordEnd[DEFAULT_IPC_REC_MAX_NUM];
+	char		CapPath[DEFAULT_IPC_PIC_MAX_NUM][64];
+	char		RecordPath[DEFAULT_IPC_REC_MAX_NUM][64];
 }IPC_CONFIG,*PIPC_CONFIG;
 
 typedef struct _PRODUCT_CONFIG

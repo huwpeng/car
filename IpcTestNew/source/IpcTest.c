@@ -48,29 +48,31 @@ int main(int argc, char **argv)
 		printf("-----rec_path=%s-----\r\n",rec_path);
 #endif
 
+#if 0
 	memset(&code_list,0,sizeof(code_list));
-	ZFY_LprProcess("/opt/resource/models/r2_mobile","/opt/resource/images/test_img.jpg",&code_list);
+	ZFY_LprProcess("/home/resource/models/r2_mobile","/home/resource/images/test_img.jpg",&code_list);
 	for(i=0;i<code_list.CodeNum;i++)
 		printf("-----code=%s-----\r\n",code_list.CodeList[i]);
 	
 	memset(&code_list,0,sizeof(code_list));
-	ZFY_LprProcess("/opt/resource/models/r2_mobile","/opt/car/a.jpg",&code_list);
+	ZFY_LprProcess("/home/resource/models/r2_mobile","/home/car/a.jpg",&code_list);
 	for(i=0;i<code_list.CodeNum;i++)
 		printf("-----code=%s-----\r\n",code_list.CodeList[i]);
 	
 	memset(&code_list,0,sizeof(code_list));
-	ZFY_LprProcess("/opt/resource/models/r2_mobile","/opt/car/b.jpg",&code_list);
+	ZFY_LprProcess("/home/resource/models/r2_mobile","/home/car/b.jpg",&code_list);
 	for(i=0;i<code_list.CodeNum;i++)
 		printf("-----code=%s-----\r\n",code_list.CodeList[i]);
 	
 	memset(&code_list,0,sizeof(code_list));
-	ZFY_LprProcess("/opt/resource/models/r2_mobile","/opt/car/c.jpg",&code_list);
+	ZFY_LprProcess("/home/resource/models/r2_mobile","/home/car/c.jpg",&code_list);
 	for(i=0;i<code_list.CodeNum;i++)
 		printf("-----code=%s-----\r\n",code_list.CodeList[i]);
+#endif
 
 	{
 		IPC_CONFIG ipc_conf;
-		struct in_addr 	Addr;
+		struct in_addr Addr;
 		
 		ZFY_ConfConfigDataBaseInit();
 		memset(&ipc_conf,0,sizeof(ipc_conf));
@@ -84,11 +86,13 @@ int main(int argc, char **argv)
 	}
 	
 	{
+		ZFY_RolaPowerCtrl(TRUE);
 		ZFY_RolaDevOpen();
-		sleep(90);
+		sleep(900);
 		ZFY_RolaDevClose();
 	}
 	
+#if 0
 	{
 		CLOAD_PLAT_CONF CloadConf;
 		
@@ -100,8 +104,12 @@ int main(int argc, char **argv)
 		CloadConf.strDevIMEI="868591050607174";
 		CloadConf.strDevIMSI="460042187616489";
 		
+		ZFY_4GModelPowerCtrl(TRUE);
+		ZFY_4GModelStartCtrl();
+		ZFY_4GModelResetCtrl();
 		ZFY_CloadServerOpen(&CloadConf);
 		sleep(30);
 		ZFY_CloadServerClose();
 	}
+#endif
 } 

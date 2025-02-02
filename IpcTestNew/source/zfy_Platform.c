@@ -366,7 +366,7 @@ static BOOL CloadParseRecvData(const BYTE *pBuf,const DWORD Len)
 						{
 							BYTE SendBuf[256]={0};
 							WORD Count=0,MsgLen=16;
-							BYTE DevMsgId=0x7A;
+							BYTE DevMsgId=0x0A;
 							BYTE MsgBody[16]={0};
 							WORD U16Temp=0;
 							WORD U16CRC=0;
@@ -739,7 +739,7 @@ static void *CloadTcpNetThread(void *pArg)
  *功能描述: 平台协议模块状态查询
  *输入描述: 无
  *输出描述: 无
- *返回描述: 无
+ *返回描述: TRUE/FALSE
  *作者日期: LJJ/2024/12/02
  *全局声明: sCloadTcpServer
  *特殊说明: 无
@@ -762,7 +762,7 @@ extern BOOL ZFY_CloadServerStatus(BOOL *pIsAlive, BOOL *pIsLogin)
  *功能描述: 平台协议模块打开
  *输入描述: 配置参数
  *输出描述: 无
- *返回描述: 无
+ *返回描述: TRUE/FALSE
  *作者日期: LJJ/2024/12/02
  *全局声明: sCloadTcpServerMutex,sCloadTcpServer
  *特殊说明: 无
@@ -856,4 +856,71 @@ extern void ZFY_CloadServerClose(void)
 		sCloadTcpServer.m_IsReady=FALSE;
 	}
 	PTHREAD_MUTEX_SAFE_UNLOCK(sCloadTcpServerMutex,OldStatus);
+}
+
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_4GModelPowerCtrl
+ *功能描述: 4G模块电源控制
+ *输入描述: 是否上电
+ *输出描述: 无
+ *返回描述: TRUE/FALSE
+ *作者日期: LJJ/2024/12/02
+ *全局声明: 无
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
+extern BOOL ZFY_4GModelPowerCtrl(BOOL PowerEnable)
+{
+	system("echo 97 >/sys/class/gpio/export");  
+	system("echo out >/sys/class/gpio/gpio97/direction");	
+	if(PowerEnable) 
+		system("echo 1 >/sys/class/gpio/gpio97/value");
+	else
+		system("echo 0 >/sys/class/gpio/gpio97/value");
+	return TRUE;
+}
+
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_4GModelStartCtrl
+ *功能描述: 4G模块开机控制
+ *输入描述: 无
+ *输出描述: 无
+ *返回描述: TRUE/FALSE
+ *作者日期: LJJ/2024/12/02
+ *全局声明: 无
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
+extern BOOL ZFY_4GModelStartCtrl(void)
+{
+	system("echo 38 >/sys/class/gpio/export");  
+	system("echo out >/sys/class/gpio/gpio38/direction");	
+	system("echo 1 >/sys/class/gpio/gpio38/value");
+	sleep(1);
+	system("echo 0 >/sys/class/gpio/gpio38/value");
+	return TRUE;
+}
+
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_4GModelResetCtrl
+ *功能描述: 4G模块复位控制
+ *输入描述: 无
+ *输出描述: 无
+ *返回描述: TRUE/FALSE
+ *作者日期: LJJ/2024/12/02
+ *全局声明: 无
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
+extern BOOL ZFY_4GModelResetCtrl(void)
+{
+	system("echo 40 >/sys/class/gpio/export");  
+	system("echo out >/sys/class/gpio/gpio40/direction");	
+	system("echo 1 >/sys/class/gpio/gpio40/value");
+	sleep(1);
+	system("echo 0 >/sys/class/gpio/gpio40/value");
+	return TRUE;
 }

@@ -48,7 +48,7 @@
  * 常数定义
  ************************************************************************************************************************************************************************
 */
-#define SER_DEV_NAME	"/dev/ttyS3"
+#define SER_DEV_NAME	"/dev/ttyS2"
 
 #define SER_DEV_OUTPUT_QUEUE_SIZE				64
 #define SER_DEV_INPUT_QUEUE_SIZE				64
@@ -66,6 +66,7 @@
 #define SER_DEV_MAX_RETRY_COUNT						180
 #define SER_DEV_UART_BAUDRATE						9600
 
+#define SER_DEV_ROLA_MASTER_MODE					1
 
 /*
  ************************************************************************************************************************************************************************
@@ -739,9 +740,10 @@ static void LoraParseRecvData(BYTE *pBuf,DWORD Len)
 					printf("-----type=0x%x------\r\n",RecvBuf[i+11]);
 					switch(RecvBuf[i+11])
 					{
-					case 0x0A:
+					case 0x0A:	//初始包
 						{
 							BYTE SendBuf[256]={0};
+							BYTE CmdBuf[256]={0};
 							WORD Count=0,MsgLen=16;
 							BYTE DevMsgId=0x7A;
 							BYTE MsgBody[16]={0};
@@ -765,14 +767,86 @@ static void LoraParseRecvData(BYTE *pBuf,DWORD Len)
 							SendBuf[14+sizeof(MsgBody)]=U16CRC>>8;
 							SendBuf[15+sizeof(MsgBody)]=U16CRC&0xff;
 							SendBuf[16+sizeof(MsgBody)]=0xF1;
-							
+						#if SER_DEV_ROLA_MASTER_MODE
+							sprintf(CmdBuf,"BBF+LORASEND=0000000000000000,");
+							ZFY_RolaWriteData(CmdBuf,strlen(CmdBuf),FALSE,NULL);
+						#endif
 							ZFY_RolaWriteData(SendBuf,17+sizeof(MsgBody),FALSE,NULL);
 						}
-						//ZFY_RolaWriteData(key,16,FALSE,NULL);
 						break;
-					case 0x0B:
+					case 0x0B:	//心跳包
+						{
+							BYTE SendBuf[256]={0};
+							BYTE CmdBuf[256]={0};
+							WORD Count=0,MsgLen=16;
+							BYTE DevMsgId=0x7B;
+							BYTE MsgBody[16]={0};
+							WORD U16Temp=0;
+							WORD U16CRC=0;
+							
+							SendBuf[0]=0x1F;
+							SendBuf[9]=(Count<<8)&0xff;
+							SendBuf[10]=Count&0xff;
+							SendBuf[11]=DevMsgId;
+							SendBuf[12]=(MsgLen<<8)&0xff;;
+							SendBuf[13]=MsgLen&0xff;;
+							AES_init_ctx(&ctx, key);
+							num = MsgLen/16;
+							for(j=0;j<num;j++)
+							{
+								AES_ECB_encrypt(&ctx, &MsgBody[j*16]);
+							}
+							memcpy(&SendBuf[14],MsgBody,sizeof(MsgBody));
+							U16CRC = CRC_16_S_CCIT_FALSE(SendBuf,14+sizeof(MsgBody));
+							SendBuf[14+sizeof(MsgBody)]=U16CRC>>8;
+							SendBuf[15+sizeof(MsgBody)]=U16CRC&0xff;
+							SendBuf[16+sizeof(MsgBody)]=0xF1;
+						#if SER_DEV_ROLA_MASTER_MODE
+							sprintf(CmdBuf,"BBF+LORASEND=0000000000000000,");
+							ZFY_RolaWriteData(CmdBuf,strlen(CmdBuf),FALSE,NULL);
+						#endif
+							ZFY_RolaWriteData(SendBuf,17+sizeof(MsgBody),FALSE,NULL);
+						}
 						break;
-					case 0x0C:
+					case 0x0C:	//事件上报包
+						{
+							BYTE SendBuf[256]={0};
+							BYTE CmdBuf[256]={0};
+							WORD Count=0,MsgLen=16;
+							BYTE DevMsgId=0x7C;
+							BYTE MsgBody[16]={0};
+							WORD U16Temp=0;
+							WORD U16CRC=0;
+							
+							SendBuf[0]=0x1F;
+							SendBuf[9]=(Count<<8)&0xff;
+							SendBuf[10]=Count&0xff;
+							SendBuf[11]=DevMsgId;
+							SendBuf[12]=(MsgLen<<8)&0xff;;
+							SendBuf[13]=MsgLen&0xff;;
+							AES_init_ctx(&ctx, key);
+							num = MsgLen/16;
+							for(j=0;j<num;j++)
+							{
+								AES_ECB_encrypt(&ctx, &MsgBody[j*16]);
+							}
+							memcpy(&SendBuf[14],MsgBody,sizeof(MsgBody));
+							U16CRC = CRC_16_S_CCIT_FALSE(SendBuf,14+sizeof(MsgBody));
+							SendBuf[14+sizeof(MsgBody)]=U16CRC>>8;
+							SendBuf[15+sizeof(MsgBody)]=U16CRC&0xff;
+							SendBuf[16+sizeof(MsgBody)]=0xF1;
+						#if SER_DEV_ROLA_MASTER_MODE
+							sprintf(CmdBuf,"BBF+LORASEND=0000000000000000,");
+							ZFY_RolaWriteData(CmdBuf,strlen(CmdBuf),FALSE,NULL);
+						#endif
+							ZFY_RolaWriteData(SendBuf,17+sizeof(MsgBody),FALSE,NULL);
+						}
+						break;
+					case 0x0D:	//校时包
+						break;
+					case 0x0E:	//配置包
+						break;
+					case 0x0F:	//参数查询包
 						break;
 					default:
 						ZFY_LES_LogPrintf("LORA",LOG_EVENT_LEVEL_NOTICE,"***protocol(Cmd=0x%X)...\r\n",RecvBuf[i+3]);
@@ -813,8 +887,8 @@ static void *SerDevUnitRecvThread(void *pArg)
 	pStatus=&sSerDevServer.UnitStatus;
 	
 	{
-		BYTE buf[19]={0x1F,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x00,0x01,0x0A,0x00,0x02,0x55,0xaa,0x12,0x2c,0xF1};
-		LoraParseRecvData(buf,19);
+		//BYTE buf[19]={0x1F,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x00,0x01,0x0A,0x00,0x02,0x55,0xaa,0x12,0x2c,0xF1};
+		//LoraParseRecvData(buf,19);
 	}
 	for(;;)
 	{
@@ -1187,8 +1261,8 @@ static void *AlarmProcThread(void *pArg)
 			IpcApiConf.IpcServerPort=IpcConf.IpcPort;
 			IpcApiConf.strLoginUser=IpcConf.IpcUser;
 			IpcApiConf.strLoginPwd=IpcConf.IpcPwd;
-			IpcApiConf.strPicPath="/opt/car/pic/";
-			IpcApiConf.strRecPath="/opt/car/rec/";
+			IpcApiConf.strPicPath="/home/car/pic/";
+			IpcApiConf.strRecPath="/home/car/rec/";
 			ZFY_IpcInit(&IpcApiConf);
 			ZFY_IpcGetTime(0);
 			ZFY_IpcStartRecord(0);
@@ -1213,6 +1287,8 @@ static void *AlarmProcThread(void *pArg)
 			ZFY_IpcStopRecord(0);
 			ZFY_IpcLoadRecord(start_time,stop_time,0,IpcConf.RecordPath[0]);
 			printf("------IpcConf.RecordPath[0]=%s-----\r\n",IpcConf.RecordPath[0]);
+			IpcConf.RecordStart[0]=start_time;
+			IpcConf.RecordEnd[0]=stop_time;
 			IpcConf.AlarmFlag=1;
 			ZFY_ConfIpcConfig(TRUE,&IpcConf);
 			pServer->IsAlarmTrig=FALSE;
@@ -1227,7 +1303,7 @@ static void *AlarmProcThread(void *pArg)
  *功能描述: ROLA模块打开
  *输入描述: 无
  *输出描述: 无
- *返回描述: 无
+ *返回描述: TRUE/FALSE
  *作者日期: LJJ/2024/12/02
  *全局声明: sSerDevMutex,sSerDevServer
  *特殊说明: 无
@@ -1363,7 +1439,7 @@ extern void ZFY_RolaDevClose(void)
  *功能描述: ROLA模块发送数据
  *输入描述: 数据缓冲区,数据长度,溢出标志,超时
  *输出描述: 无
- *返回描述: 无
+ *返回描述: TRUE/FALSE
  *作者日期: LJJ/2024/12/02
  *全局声明: sSerDevMutex,sSerDevServer
  *特殊说明: 无
@@ -1471,7 +1547,7 @@ extern BOOL ZFY_RolaWriteData(const void *pBuf,DWORD dwSize,BOOL IsAutoOver,cons
  *功能描述: ROLA模块接收数据
  *输入描述: 数据缓冲区,数据长度,超时
  *输出描述: 无
- *返回描述: 无
+ *返回描述: TRUE/FALSE
  *作者日期: LJJ/2024/12/02
  *全局声明: sSerDevMutex,sSerDevServer
  *特殊说明: 无
@@ -1563,5 +1639,33 @@ extern BOOL ZFY_RolaReadData(void *pBuf,DWORD *pBufSize,const DWORD *pTimeOutMS)
 	}
 	PTHREAD_MUTEX_SAFE_UNLOCK(sSerOutputQueueMutex,CancelStatus);
 	PTHREAD_MUTEX_SAFE_UNLOCK(sSerDevMutex,OldStatus);
+	return TRUE;
+}
+
+/*
+ ************************************************************************************************************************************************************************     
+ *函数名称: ZFY_RolaPowerCtrl
+ *功能描述: ROLA模块电源控制
+ *输入描述: 是否上电
+ *输出描述: 无
+ *返回描述: TRUE/FALSE
+ *作者日期: LJJ/2024/12/02
+ *全局声明: 无
+ *特殊说明: 无
+ ************************************************************************************************************************************************************************       
+*/
+extern BOOL ZFY_RolaPowerCtrl(BOOL PowerEnable)
+{
+	system("echo 88 >/sys/class/gpio/export");  
+	system("echo out >/sys/class/gpio/gpio88/direction");	
+	if(PowerEnable) 
+		system("echo 1 >/sys/class/gpio/gpio88/value");
+	else
+		system("echo 0 >/sys/class/gpio/gpio88/value");
+	system("echo uart 0x1111 > /proc/nvt_info/nvt_pinmux/pinmux_set");
+	sleep(1);
+#if SER_DEV_ROLA_MASTER_MODE
+	system("echo \"BBF+LORACFG=22,0000000000000001\" >/dev/ttyS2");
+#endif
 	return TRUE;
 }
